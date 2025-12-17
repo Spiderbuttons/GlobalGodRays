@@ -13,8 +13,19 @@ public class RayManager : IDisposable
 {
     private Texture2D? _rayTexture;
     private Texture2D RayTexture => _rayTexture ??= Game1.content.Load<Texture2D>("Spiderbuttons.GodRays/LightRays");
+    private Texture2D? _hiResRayTexture;
+    private Texture2D HiResRayTexture => _hiResRayTexture ??= Game1.content.Load<Texture2D>("Spiderbuttons.GodRays/HiResRays");
+    
     private int RaySeed;
-    private Color AmbientLight = new(150, 120, 50);
+
+    /* This controls how large the rays are drawn on screen. Larger rays are also more transparent. */
+    private float DefaultRayScale => ModEntry.Config.RayScale;
+    
+    /* This controls how dense and numerous the light rays are. */
+    private float LightrayIntensity => ModEntry.Config.RayIntensity;
+    
+    /* This controls how fast the god rays go through their animation. */
+    private float RayAnimationSpeed => ModEntry.Config.RayAnimationSpeed;
     
     private static readonly Color DaytimeColour = new(255, 255, 255);
     private static readonly Color EarlySunsetColour = new(255, 229, 138);
@@ -23,11 +34,9 @@ public class RayManager : IDisposable
 
     private Color RayColour = DaytimeColour;
 
-    private float RayScrollSpeed = 20f;
-
-    private const float MORNING_ANGLE = 0f;
-    private const float NOON_ANGLE = -27f;
-    private const float NIGHT_ANGLE = NOON_ANGLE * 2;
+    private const float MORNING_ANGLE = 45f;
+    private const float NOON_ANGLE = 0f;
+    private const float NIGHT_ANGLE = -MORNING_ANGLE;
 
     private int MorningTime => 600;
     private int NoonTime => 1200;
@@ -49,18 +58,19 @@ public class RayManager : IDisposable
         
         UpdateAngleOfRays();
         UpdateTimeBasedOpacity();
+        UpdateRayColour();
     }
 
     private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
     {
         if (e.Button is SButton.OemPlus)
         {
-            RayScrollSpeed += 10f;
+            ModEntry.Config.RayAnimationSpeed += 10f;
         } else if (e.Button is SButton.OemMinus)
         {
-            RayScrollSpeed -= 10f;
+            ModEntry.Config.RayAnimationSpeed -= 10f;
         }
-        RayScrollSpeed = MathHelper.Clamp(RayScrollSpeed, 0f, 1000f);
+        ModEntry.Config.RayAnimationSpeed = MathHelper.Clamp(RayAnimationSpeed, 0f, 1000f);
     }
 
     private void UpdateAngleOfRays()
@@ -134,22 +144,28 @@ public class RayManager : IDisposable
         
         SpriteBatch b = e.SpriteBatch;
         Random random = Utility.CreateRandom(RaySeed);
-
-        /* This controls how dense and numerous the light rays are. */
-        float lightRayIntensity = 4f;
+        Color drawColour = RayColour;
         
         /* Don't know where the magic numbers come from here. */
         float zoomFactor = Game1.graphics.GraphicsDevice.Viewport.Height * 0.6f / 128f;
         int minRays = -(int)(128f / zoomFactor);
-        int maxRays = location.Map.DisplayWidth / (int)(32f / lightRayIntensity * zoomFactor);
+        int maxRays = location.Map.DisplayWidth / (int)(32f / LightrayIntensity * zoomFactor);
         /* -------------------------------------------------- */
-        
 
-        float rayScaleMultiplier = 0.65f - 0.3f;
-        Color drawColour = RayColour;
+        float rayScaleMultiplier = DefaultRayScale;
+        /* As rayScaleMultiplier grows, the rays should become more transparent to avoid filling the screen with ugly white blob. */
+        float scaleOpacityFactor = 1f;
+        if (rayScaleMultiplier > DefaultRayScale)
+        {
+            scaleOpacityFactor = 1f - Math.Abs(rayScaleMultiplier - DefaultRayScale);
+            scaleOpacityFactor = Utility.Clamp(scaleOpacityFactor, 0.5f, 1f);
+            drawColour *= scaleOpacityFactor;
+        }
+        /* ---------------------------------------------------------------------------------------------------------------------- */
+
         for (int i = minRays; i < maxRays; i++)
         {
-            float deg = (float)Game1.currentGameTime.TotalGameTime.TotalSeconds * RayScrollSpeed;
+            float deg = (float)Game1.currentGameTime.TotalGameTime.TotalSeconds * RayAnimationSpeed;
 
             /* These two lines add some random variation to each ray's movement. */
             deg *= Utility.RandomFloat(0.75f, 1f, random);
@@ -162,7 +178,7 @@ public class RayManager : IDisposable
             float rad = MathHelper.ToRadians(deg);
             Color rayColour = drawColour;
             rayColour *= Utility.Clamp((float)easeInOutQuad(rad), 0f, 1f);
-            // rayColour *= Utility.RandomFloat(0.25f, 0.5f, random);
+            rayColour *= Math.Clamp(Utility.RandomFloat(0.25f, 0.5f, random) + scaleOpacityFactor, 0f, 1f);
             /* ------------------------------------------------------------------------------- */
             
             /* Multiply by our time-based opacity factor from earlier to make the lights fade out as night approaches. */
@@ -172,21 +188,33 @@ public class RayManager : IDisposable
             float offset = Utility.Lerp(0f - Utility.RandomFloat(24f, 32f, random), 0f, deg / 360f);
             
             /* Then we offset them further depending on where the viewport is on the map, so the rays stay in the same relative location. */
-            offset += Game1.viewport.X / zoomFactor;
-            if ((i * (32 / lightRayIntensity) - offset) * zoomFactor < 0) offset = location.Map.DisplayWidth - offset;
+            offset += Game1.viewport.X / zoomFactor / 1.15f;
+            // offset -= Game1.viewport.Y / zoomFactor / 1.15f; TODO: At 6am this should be positive, at 6pm it should be negative. Lerping?
+            // if ((i * (32 / lightRayIntensity) - offset) * zoomFactor < 0) offset = location.Map.DisplayWidth - offset;
             /* -------------------------------------------------------------------------------------------------------------------------- */
+
+            int chosenRay = random.Next(0, 3);
+            Rectangle sourceRect = chosenRay switch 
+            {
+                0 => new Rectangle(230, 0, 100, 850),
+                1 => new Rectangle(575, 0, 215, 1015),
+                _ => new Rectangle(1065, 0, 630, 1000),
+            };
+            
+            float nearFinalDrawScale = zoomFactor * rayScaleMultiplier * Utility.RandomFloat(0.85f, 1.15f, random);
+            float finalDrawScale = nearFinalDrawScale * Game1.graphics.GraphicsDevice.Viewport.Height / sourceRect.Height;
             
             /* Where we're going, we don't need alpha blend mode... */
             b.End();
             b.Begin(SpriteSortMode.Deferred, BlendState.Additive, SamplerState.PointClamp);
             b.Draw(
-                texture: RayTexture,
-                position: new Vector2((i * (32 / lightRayIntensity) - offset) * zoomFactor, Utility.RandomFloat(0f, -32f * zoomFactor, random)),
-                sourceRectangle: new Rectangle(128 * random.Next(0, 2), 0, 128, 128),
+                texture: HiResRayTexture,
+                position: new Vector2((i * (sourceRect.Width / 4f / LightrayIntensity) - offset) * zoomFactor, Utility.RandomFloat(0f, -32f * zoomFactor, random)),
+                sourceRectangle: sourceRect,
                 color: rayColour,
                 rotation: TimeBasedRotation,
-                origin: new Vector2(64, 0),
-                scale: zoomFactor * rayScaleMultiplier * Utility.RandomFloat(0.85f, 1.15f, random),
+                origin: new Vector2(sourceRect.Width / 2f, 64f),
+                scale: new Vector2(finalDrawScale, finalDrawScale),
                 effects: SpriteEffects.None,
                 layerDepth: 1f
             );
@@ -208,6 +236,12 @@ public class RayManager : IDisposable
         {
             _rayTexture = null;
         }
+        
+        if (e.NamesWithoutLocale.Any(a => a.IsEquivalentTo("Spiderbuttons.GodRays/HiResRays")))
+        {
+            _hiResRayTexture = null;
+        }
+        /* ------------------------------------------------------------------------------------ */
     }
     
     public void Dispose()

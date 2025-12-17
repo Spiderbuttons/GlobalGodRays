@@ -12,9 +12,8 @@ namespace GlobalGodRays
         internal static IModHelper ModHelper { get; set; } = null!;
         internal static IMonitor ModMonitor { get; set; } = null!;
         internal static ModConfig Config { get; set; } = null!;
-        internal static Harmony Harmony { get; set; } = null!;
         
-        private static RayManager RayManager { get; set; } = null!;
+        public static RayManager? RayManager { get; set; }
 
         public override void Entry(IModHelper helper)
         {
@@ -22,9 +21,6 @@ namespace GlobalGodRays
             ModHelper = helper;
             ModMonitor = Monitor;
             Config = helper.ReadConfig<ModConfig>();
-            Harmony = new Harmony(ModManifest.UniqueID);
-
-            Harmony.PatchAll();
 
             Helper.Events.Content.AssetRequested += OnAssetRequested;
             Helper.Events.Input.ButtonPressed += OnButtonPressed;
@@ -37,6 +33,11 @@ namespace GlobalGodRays
             if (e.NameWithoutLocale.IsEquivalentTo("Spiderbuttons.GodRays/LightRays"))
             {
                 e.LoadFromModFile<Texture2D>("assets/LightRays.png", AssetLoadPriority.Medium);
+            }
+
+            if (e.NameWithoutLocale.IsEquivalentTo("Spiderbuttons.GodRays/HiResRays"))
+            {
+                e.LoadFromModFile<Texture2D>("assets/HiResRays.png", AssetLoadPriority.Medium);
             }
         }
 
