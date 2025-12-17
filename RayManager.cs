@@ -19,7 +19,8 @@ public class RayManager : IDisposable
     private int RaySeed;
 
     /* This controls how large the rays are drawn on screen. Larger rays are also more transparent. */
-    private float DefaultRayScale => ModEntry.Config.RayScale;
+    private float DefaultRayScale => 0.25f;
+    private float RayScale => ModEntry.Config.RayScale;
     
     /* This controls how dense and numerous the light rays are. */
     private float LightrayIntensity => ModEntry.Config.RayIntensity;
@@ -152,7 +153,7 @@ public class RayManager : IDisposable
         int maxRays = location.Map.DisplayWidth / (int)(32f / LightrayIntensity * zoomFactor);
         /* -------------------------------------------------- */
 
-        float rayScaleMultiplier = DefaultRayScale;
+        float rayScaleMultiplier = RayScale;
         /* As rayScaleMultiplier grows, the rays should become more transparent to avoid filling the screen with ugly white blob. */
         float scaleOpacityFactor = 1f;
         if (rayScaleMultiplier > DefaultRayScale)
@@ -188,8 +189,8 @@ public class RayManager : IDisposable
             float offset = Utility.Lerp(0f - Utility.RandomFloat(24f, 32f, random), 0f, deg / 360f);
             
             /* Then we offset them further depending on where the viewport is on the map, so the rays stay in the same relative location. */
-            offset += Game1.viewport.X / zoomFactor / 1.15f;
-            // offset -= Game1.viewport.Y / zoomFactor / 1.15f; TODO: At 6am this should be positive, at 6pm it should be negative. Lerping?
+            offset += Game1.viewport.X / zoomFactor / 1.05f;
+            offset += Game1.viewport.Y / zoomFactor / 1.05f; // TODO: At 6am this should be positive, at 6pm it should be negative. Lerping?
             // if ((i * (32 / lightRayIntensity) - offset) * zoomFactor < 0) offset = location.Map.DisplayWidth - offset;
             /* -------------------------------------------------------------------------------------------------------------------------- */
 
