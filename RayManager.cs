@@ -54,7 +54,6 @@ public class RayManager : IDisposable
     public RayManager()
     {
         RaySeed = (int)Game1.currentGameTime.TotalGameTime.TotalMilliseconds;
-        ModEntry.ModHelper.Events.Input.ButtonPressed += OnButtonPressed;
         ModEntry.ModHelper.Events.GameLoop.TimeChanged += UpdateValues;
         ModEntry.ModHelper.Events.Display.RenderedWorld += OnRenderedWorld;
         ModEntry.ModHelper.Events.Player.Warped += OnWarped;
@@ -68,18 +67,6 @@ public class RayManager : IDisposable
         UpdateTimeBasedOpacity();
         UpdateRayColour();
         UpdateAngleOfRays();
-    }
-
-    private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
-    {
-        if (e.Button is SButton.OemPlus)
-        {
-            ModEntry.Config.RayAnimationSpeed += 10f;
-        } else if (e.Button is SButton.OemMinus)
-        {
-            ModEntry.Config.RayAnimationSpeed -= 10f;
-        }
-        ModEntry.Config.RayAnimationSpeed = MathHelper.Clamp(RayAnimationSpeed, 0f, 1000f);
     }
 
     private void UpdateAngleOfRays()
@@ -205,7 +192,7 @@ public class RayManager : IDisposable
             };
 
             float nearFinalDrawScale = zoomFactor * rayScaleMultiplier * Utility.RandomFloat(0.85f, 1.15f, random);
-            float finalDrawScale = nearFinalDrawScale;// * Game1.graphics.GraphicsDevice.Viewport.Height / sourceRect.Height;
+            float finalDrawScale = nearFinalDrawScale;
             
             /* Then we offset them further depending on where the viewport is on the map, so the rays stay in the same relative location. */
             float followFactor = 1.05f;
@@ -289,7 +276,7 @@ public class RayManager : IDisposable
     
     public void Dispose()
     {
-        ModEntry.ModHelper.Events.Input.ButtonPressed -= OnButtonPressed;
+        ModEntry.ModHelper.Events.GameLoop.TimeChanged -= UpdateValues;
         ModEntry.ModHelper.Events.Display.RenderedWorld -= OnRenderedWorld;
         ModEntry.ModHelper.Events.Player.Warped -= OnWarped;
         ModEntry.ModHelper.Events.Content.AssetsInvalidated -= OnAssetsInvalidated;
