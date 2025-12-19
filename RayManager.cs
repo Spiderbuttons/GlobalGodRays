@@ -132,11 +132,11 @@ public class RayManager : IDisposable
     {
         /* We want the lights to fade out as it gets darker out. */
         float progressToDark = 0f;
-        if (Game1.timeOfDay >= NightTime) progressToDark = 1f;
-        else if (Game1.timeOfDay < SunsetTime) progressToDark = 0f;
-        else if (Game1.timeOfDay >= SunsetTime && Game1.timeOfDay < NightTime)
+        if (CurrentTime >= NightTime) progressToDark = 1f;
+        else if (CurrentTime < SunsetTime) progressToDark = 0f;
+        else if (CurrentTime >= SunsetTime && CurrentTime < NightTime)
         {
-            progressToDark = (Game1.timeOfDay - SunsetTime) / (float)(NightTime - SunsetTime);
+            progressToDark = (CurrentTime - SunsetTime) / (float)(NightTime - SunsetTime);
         }
         TimeOpacityFactor = Utility.Lerp(1f, 0f, progressToDark);
         /* ----------------------------------------------------- */
@@ -144,7 +144,7 @@ public class RayManager : IDisposable
 
     private void UpdateRayColour()
     {
-        switch (Game1.timeOfDay)
+        switch (CurrentTime)
         {
             case var time when time < EarlySunsetTime - 100:
                 RayColour = DaytimeColour;
