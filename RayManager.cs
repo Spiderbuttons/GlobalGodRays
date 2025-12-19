@@ -131,14 +131,16 @@ public class RayManager : IDisposable
     private void UpdateTimeBasedOpacity()
     {
         /* We want the lights to fade out as it gets darker out. */
-        float progressToDark = 0f;
-        if (CurrentTime >= NightTime) progressToDark = 1f;
-        else if (CurrentTime < SunsetTime) progressToDark = 0f;
+        float sunsetProgress = 0f;
+        if (CurrentTime >= NightTime) sunsetProgress = 1f;
+        else if (CurrentTime < SunsetTime) sunsetProgress = 0f;
         else if (CurrentTime >= SunsetTime && CurrentTime < NightTime)
         {
-            progressToDark = (CurrentTime - SunsetTime) / (float)(NightTime - SunsetTime);
+            sunsetProgress = Utility.CalculateMinutesBetweenTimes(SunsetTime, CurrentTime) / (float)Utility.CalculateMinutesBetweenTimes(SunsetTime, NightTime);
+            sunsetProgress += (MillisecondsPerMinute - MillisecondsToNextMinute) / (float)(MillisecondsPerMinute * Utility.CalculateMinutesBetweenTimes(SunsetTime, NightTime));
         }
-        TimeOpacityFactor = Utility.Lerp(1f, 0f, progressToDark);
+        
+        TimeOpacityFactor = Utility.Lerp(1f, 0f, sunsetProgress);
         /* ----------------------------------------------------- */
     }
 
