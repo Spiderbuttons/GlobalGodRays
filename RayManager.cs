@@ -48,18 +48,25 @@ public class RayManager : IDisposable
     private int EarlySunsetTime => Game1.getStartingToGetDarkTime(Game1.currentLocation);
     private int SunsetTime => Game1.getModeratelyDarkTime(Game1.currentLocation);
     private int NightTime => Game1.getTrulyDarkTime(Game1.currentLocation);
+    private int CurrentTime => Game1.timeOfDay + (int)((float)Game1.gameTimeInterval / MillisecondsPerMinute % 10f);
+    
+    
+    private int MillisecondsPerMinute => Game1.realMilliSecondsPerGameMinute + Game1.currentLocation?.ExtraMillisecondsPerInGameMinute ?? 0;
+    private int MillisecondsToNextMinute => MillisecondsPerMinute - Game1.gameTimeInterval % MillisecondsPerMinute;
+    
+    private float ProgressToNoon => Utility.CalculateMinutesBetweenTimes(MorningTime, CurrentTime) / (float)Utility.CalculateMinutesBetweenTimes(MorningTime, NoonTime);
+    private float ProgressToNight => Utility.CalculateMinutesBetweenTimes(NoonTime, CurrentTime) / (float)Utility.CalculateMinutesBetweenTimes(NoonTime, NightTime);
 
     private float TimeOpacityFactor = 1f;
     private float TimeBasedRotation;
 
-    private bool IsInCloudCover = false;
+    private bool IsInCloudCover;
     private float CloudCoverOpacityFactor = 1f;
 
     public RayManager()
     {
         RaySeed = (int)Game1.currentGameTime.TotalGameTime.TotalMilliseconds;
-        ModEntry.ModHelper.Events.GameLoop.UpdateTicked += CheckForCloudCover;
-        ModEntry.ModHelper.Events.GameLoop.TimeChanged += UpdateValues;
+        ModEntry.ModHelper.Events.GameLoop.UpdateTicked += UpdateValues;
         ModEntry.ModHelper.Events.Display.RenderedWorld += OnRenderedWorld;
         ModEntry.ModHelper.Events.Player.Warped += OnWarped;
         ModEntry.ModHelper.Events.Content.AssetsInvalidated += OnAssetsInvalidated;
@@ -67,14 +74,15 @@ public class RayManager : IDisposable
         UpdateValues(null, null);
     }
 
-    public void UpdateValues(object? sender, TimeChangedEventArgs? e)
+    public void UpdateValues(object? sender, UpdateTickedEventArgs? e)
     {
+        CheckForCloudCover();
         UpdateTimeBasedOpacity();
         UpdateRayColour();
         UpdateAngleOfRays();
     }
 
-    private void CheckForCloudCover(object? sender, UpdateTickedEventArgs e)
+    private void CheckForCloudCover()
     {
         if (Game1.currentLocation is not { IsOutdoors: true } location) return;
         
@@ -109,13 +117,13 @@ public class RayManager : IDisposable
     private void UpdateAngleOfRays()
     {
         /* The angle of the rays should change according to time of day, with noon making them point straight down. */
-        if (Game1.timeOfDay <= NoonTime)
+        if (CurrentTime <= NoonTime)
         {
-            float progressToNoon = Utility.CalculateMinutesBetweenTimes(Game1.timeOfDay, MorningTime) / (float)Utility.CalculateMinutesBetweenTimes(NoonTime, MorningTime);
-            TimeBasedRotation = MathHelper.ToRadians(Utility.Lerp(MORNING_ANGLE, NOON_ANGLE, progressToNoon));
+            TimeBasedRotation = MathHelper.ToRadians(Utility.Lerp(MORNING_ANGLE, NOON_ANGLE, ProgressToNoon));
+            TimeBasedRotation += MathHelper.ToRadians((NOON_ANGLE - MORNING_ANGLE) / Utility.CalculateMinutesBetweenTimes(MorningTime, NoonTime) * (MillisecondsPerMinute - MillisecondsToNextMinute) / MillisecondsPerMinute);
         } else {
-            float progressToNight = Utility.CalculateMinutesBetweenTimes(Game1.timeOfDay, NoonTime) / (float)Utility.CalculateMinutesBetweenTimes(NightTime, NoonTime);
-            TimeBasedRotation = MathHelper.ToRadians(Utility.Lerp(NOON_ANGLE, NIGHT_ANGLE, progressToNight));
+            TimeBasedRotation = MathHelper.ToRadians(Utility.Lerp(NOON_ANGLE, NIGHT_ANGLE, ProgressToNight));
+            TimeBasedRotation += MathHelper.ToRadians((NIGHT_ANGLE - NOON_ANGLE) / Utility.CalculateMinutesBetweenTimes(NoonTime, NightTime) * (MillisecondsPerMinute - MillisecondsToNextMinute) / MillisecondsPerMinute);
         }
         /* -------------------------------------------------------------------------------------------------------- */
     }
@@ -245,13 +253,13 @@ public class RayManager : IDisposable
             float nightVerticalOffset = -(Game1.viewport.Y / zoomFactor / followFactor);
             float currentVerticalOffset;
             
-            if (Game1.timeOfDay < NoonTime)
+            if (CurrentTime < NoonTime)
             {
-                float progressToNoon = Utility.CalculateMinutesBetweenTimes(Game1.timeOfDay, MorningTime) / (float)Utility.CalculateMinutesBetweenTimes(NoonTime, MorningTime);
-                currentVerticalOffset = Utility.Lerp(morningVerticalOffset, noonVerticalOffset, progressToNoon);
-            } else if (Game1.timeOfDay > NoonTime) {
-                float progressToNight = Utility.CalculateMinutesBetweenTimes(Game1.timeOfDay, NoonTime) / (float)Utility.CalculateMinutesBetweenTimes(NightTime, NoonTime);
-                currentVerticalOffset = Utility.Lerp(noonVerticalOffset, nightVerticalOffset, progressToNight);
+                currentVerticalOffset = Utility.Lerp(morningVerticalOffset, noonVerticalOffset, ProgressToNoon);
+                currentVerticalOffset -= (morningVerticalOffset - noonVerticalOffset) / Utility.CalculateMinutesBetweenTimes(MorningTime, NoonTime) * (MillisecondsPerMinute - MillisecondsToNextMinute) / MillisecondsPerMinute;
+            } else if (CurrentTime > NoonTime) {
+                currentVerticalOffset = Utility.Lerp(noonVerticalOffset, nightVerticalOffset, ProgressToNight);
+                currentVerticalOffset += (nightVerticalOffset - noonVerticalOffset) / Utility.CalculateMinutesBetweenTimes(NoonTime, NightTime) * (MillisecondsPerMinute - MillisecondsToNextMinute) / MillisecondsPerMinute;
             } else {
                 currentVerticalOffset = noonVerticalOffset;
             }
@@ -317,8 +325,7 @@ public class RayManager : IDisposable
     
     public void Dispose()
     {
-        ModEntry.ModHelper.Events.GameLoop.UpdateTicked -= CheckForCloudCover;
-        ModEntry.ModHelper.Events.GameLoop.TimeChanged -= UpdateValues;
+        ModEntry.ModHelper.Events.GameLoop.UpdateTicked -= UpdateValues;
         ModEntry.ModHelper.Events.Display.RenderedWorld -= OnRenderedWorld;
         ModEntry.ModHelper.Events.Player.Warped -= OnWarped;
         ModEntry.ModHelper.Events.Content.AssetsInvalidated -= OnAssetsInvalidated;
