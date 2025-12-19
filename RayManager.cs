@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
+using StardewValley.BellsAndWhistles;
 
 namespace GlobalGodRays;
 
@@ -51,9 +52,13 @@ public class RayManager : IDisposable
     private float TimeOpacityFactor = 1f;
     private float TimeBasedRotation;
 
+    private bool IsInCloudCover = false;
+    private float CloudCoverOpacityFactor = 1f;
+
     public RayManager()
     {
         RaySeed = (int)Game1.currentGameTime.TotalGameTime.TotalMilliseconds;
+        ModEntry.ModHelper.Events.GameLoop.UpdateTicked += CheckForCloudCover;
         ModEntry.ModHelper.Events.GameLoop.TimeChanged += UpdateValues;
         ModEntry.ModHelper.Events.Display.RenderedWorld += OnRenderedWorld;
         ModEntry.ModHelper.Events.Player.Warped += OnWarped;
@@ -67,6 +72,38 @@ public class RayManager : IDisposable
         UpdateTimeBasedOpacity();
         UpdateRayColour();
         UpdateAngleOfRays();
+    }
+
+    private void CheckForCloudCover(object? sender, UpdateTickedEventArgs e)
+    {
+        if (Game1.currentLocation is not { IsOutdoors: true } location) return;
+        
+        IsInCloudCover = location.critters.Any(c =>
+        {
+            if (c is not Cloud cloud) return false;
+            var cloudBB = cloud.getBoundingBox(0, 0);
+            /* The following block compensates for a fucked up vanilla bug where sometimes... the clouds... are WRONG. */
+            if (cloud is { horizontalFlip: true, verticalFlip: true })
+            {
+                cloudBB.Offset(-Cloud.width * cloud.zoom, 0);
+                cloudBB.Offset(0, -Cloud.height * cloud.zoom);
+            }
+            /* ------------------------------------------------------------------------------------------------------- */
+            cloudBB.Inflate(-6 * cloud.zoom, -6 * cloud.zoom);
+            return cloudBB.Intersects(Game1.player.GetBoundingBox());
+        });
+        
+        switch (IsInCloudCover)
+        {
+            case true when CloudCoverOpacityFactor > 0f:
+                CloudCoverOpacityFactor -= 0.03f;
+                CloudCoverOpacityFactor = Math.Max(CloudCoverOpacityFactor, 0f);
+                break;
+            case false when CloudCoverOpacityFactor < 1f:
+                CloudCoverOpacityFactor += 0.03f;
+                CloudCoverOpacityFactor = Math.Min(CloudCoverOpacityFactor, 1f);
+                break;
+        }
     }
 
     private void UpdateAngleOfRays()
@@ -175,6 +212,10 @@ public class RayManager : IDisposable
             
             /* And also multiply it by our configurable opacity multiplier, in case all these calculations are not to a user's tastes. */
             rayColour *= ModEntry.Config.RayOpacityModifier;
+
+            /* This also makes the rays fade out when the player is standing beneath a cloud. */
+            rayColour *= CloudCoverOpacityFactor;
+            // TODO: Scale the CloudCoverOpacityFactor based on how much of the screen real-estate the rays take up. Rays taking up the whole screen should probably not be hidden by a cloud that takes up only a small fraction of the screen.
             
             /* First we offset each ray by a random amount so they're not all stacked or immediately side by side. */
             float offset = Utility.Lerp(0f - Utility.RandomFloat(24f, 32f, random), 0f, deg / 360f);
@@ -276,6 +317,7 @@ public class RayManager : IDisposable
     
     public void Dispose()
     {
+        ModEntry.ModHelper.Events.GameLoop.UpdateTicked -= CheckForCloudCover;
         ModEntry.ModHelper.Events.GameLoop.TimeChanged -= UpdateValues;
         ModEntry.ModHelper.Events.Display.RenderedWorld -= OnRenderedWorld;
         ModEntry.ModHelper.Events.Player.Warped -= OnWarped;
