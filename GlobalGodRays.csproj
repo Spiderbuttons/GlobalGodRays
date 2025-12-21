@@ -8,7 +8,6 @@
         <GamePath>C:\Program Files (x86)\Steam\steamapps\common\Stardew Valley</GamePath>
         <GameModsPath>$(GamePath)\ModsDebug</GameModsPath>
         <StartArguments>--mods-path "$(GameModsPath)"</StartArguments>
-        <EnableHarmony>true</EnableHarmony>
         <EnableModDeploy>true</EnableModDeploy>
         <EnableModZip>true</EnableModZip>
         <ModFolderName>GlobalGodRays</ModFolderName>

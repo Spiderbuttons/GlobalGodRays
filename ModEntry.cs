@@ -1,9 +1,11 @@
-﻿using GenericModConfigMenu;
-using HarmonyLib;
+﻿using System.Text;
+using GenericModConfigMenu;
 using GlobalGodRays.Config;
+using GlobalGodRays.Helpers;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
+using StardewValley;
 
 namespace GlobalGodRays
 {
@@ -26,6 +28,14 @@ namespace GlobalGodRays
             Helper.Events.Input.ButtonPressed += OnButtonPressed;
             Helper.Events.GameLoop.GameLaunched += OnGameLaunched;
             Helper.Events.GameLoop.SaveLoaded += OnSaveLoaded;
+            Helper.Events.GameLoop.ReturnedToTitle += OnReturnedToTitle;
+            Helper.Events.GameLoop.DayStarted += OnDayStarted;
+        }
+
+        private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
+        {
+            RayManager?.Dispose();
+            RayManager = null;
         }
 
         private void OnAssetRequested(object? sender, AssetRequestedEventArgs e)
@@ -50,6 +60,24 @@ namespace GlobalGodRays
         {
             var configMenu = Helper.ModRegistry.GetApi<IGenericModConfigMenuApi>("spacechase0.GenericModConfigMenu");
             if (configMenu != null) Config.SetupConfig(configMenu, ModManifest, Helper);
+            LogCommWarning();
+        }
+
+        private void LogCommWarning()
+        {
+            StringBuilder commWarning = new StringBuilder();
+            commWarning.AppendLine();
+            commWarning.AppendLine($@"/* ----------------------------------------------------------------- *\");
+            commWarning.AppendLine($@"/*                                                                   *\");
+            commWarning.AppendLine($@"/*    This is a commissioned mod that has not yet been paid for!     *\");
+            commWarning.AppendLine($@"/*                                                                   *\");
+            commWarning.AppendLine($@"/* ----------------------------------------------------------------- *\");
+            Log.Alert(commWarning.ToString());
+        }
+
+        private void OnDayStarted(object? sender, DayStartedEventArgs e)
+        {
+            LogCommWarning();
         }
 
         private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
@@ -61,6 +89,11 @@ namespace GlobalGodRays
             {
                 RayManager?.Dispose();
                 RayManager = new RayManager();
+            }
+
+            if (e.Button is SButton.F5)
+            {
+                for (int i = 0; i < 50; i++) Game1.currentLocation.addClouds(1, true);
             }
         }
     }
