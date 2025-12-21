@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using GlobalGodRays.Helpers;
 using Microsoft.Xna.Framework;
@@ -7,11 +8,34 @@ using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
 using StardewValley.BellsAndWhistles;
+using StardewValley.Extensions;
 
 namespace GlobalGodRays;
 
 public class RayManager : IDisposable
 {
+    private static Dictionary<string, bool>? _locationOverrides;
+    private static Dictionary<string, bool> LocationOverrides {
+        get {
+            if (_locationOverrides is null)
+            {
+                try
+                {
+                    _locationOverrides = ModEntry.ModHelper.ModContent.Load<Dictionary<string, bool>>("location_overrides.json");
+                }
+                catch
+                {
+                    _locationOverrides = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+                }
+            }
+            return _locationOverrides;
+        }
+    }
+    
+    private bool ShouldDrawRays => Game1.currentLocation is not null && (LocationOverrides.TryGetValue(Game1.currentLocation.Name, out bool isEnabled)
+                                       ? isEnabled
+                                       : Game1.currentLocation.IsOutdoors);
+
     private Texture2D? _vanillaRayTexture;
     private Texture2D VanillaRayTexture => _vanillaRayTexture ??= Game1.content.Load<Texture2D>("Spiderbuttons.GodRays/LightRays");
     private Texture2D? _hiResRayTexture;
@@ -66,6 +90,8 @@ public class RayManager : IDisposable
     public RayManager()
     {
         RaySeed = (int)Game1.currentGameTime.TotalGameTime.TotalMilliseconds;
+        
+        ModEntry.ModHelper.Events.Input.ButtonPressed += OnButtonPressed;
         ModEntry.ModHelper.Events.GameLoop.UpdateTicked += UpdateValues;
         ModEntry.ModHelper.Events.Display.RenderedWorld += OnRenderedWorld;
         ModEntry.ModHelper.Events.Player.Warped += OnWarped;
@@ -74,8 +100,31 @@ public class RayManager : IDisposable
         UpdateValues(null, null);
     }
 
+    private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
+    {
+        if (!ModEntry.Config.ToggleLocationKey.JustPressed() || Game1.currentLocation is not { } location) return;
+        
+        bool normallyAllowed = location.IsOutdoors;
+        Game1.hudMessages.RemoveWhere(msg => msg.message is "Godrays enabled in this location." or "Godrays disabled in this location.");
+        if (LocationOverrides.ContainsKey(location.Name))
+        {
+            bool isEnabled = !LocationOverrides[location.Name];
+            LocationOverrides.Remove(location.Name);
+            Game1.addHUDMessage(new HUDMessage($"Godrays {(isEnabled ? "enabled" : "disabled")} in this location.", isEnabled ? HUDMessage.newQuest_type : HUDMessage.error_type));
+        }
+        else
+        {
+            LocationOverrides.Add(location.Name, !normallyAllowed);
+            bool isEnabled = LocationOverrides[location.Name];
+            Game1.addHUDMessage(new HUDMessage($"Godrays {(isEnabled ? "enabled" : "disabled")} in this location.", isEnabled ? HUDMessage.newQuest_type : HUDMessage.error_type));
+        }
+        ModEntry.ModHelper.Data.WriteJsonFile("location_overrides.json", LocationOverrides.Any() ? LocationOverrides : null);
+    }
+
     public void UpdateValues(object? sender, UpdateTickedEventArgs? e)
     {
+        if (!ShouldDrawRays) return;
+        
         CheckForCloudCover();
         UpdateTimeBasedOpacity();
         UpdateRayColour();
@@ -176,7 +225,7 @@ public class RayManager : IDisposable
 
     private void OnRenderedWorld(object? sender, RenderedWorldEventArgs e)
     {
-        if (Game1.currentLocation is not { IsOutdoors: true } location) return;
+        if (!ShouldDrawRays) return;
         
         SpriteBatch b = e.SpriteBatch;
         Random random = Utility.CreateRandom(RaySeed);
@@ -185,13 +234,13 @@ public class RayManager : IDisposable
         /* Don't know where the magic numbers come from here. */
         float zoomFactor = Game1.graphics.GraphicsDevice.Viewport.Height * 0.6f / 128f;
         int minRays = -(int)(128f / zoomFactor);
-        int maxRays = location.Map.DisplayWidth / (int)(32f / LightrayIntensity * zoomFactor);
+        int maxRays = Game1.currentLocation.Map.DisplayWidth / (int)(32f / LightrayIntensity * zoomFactor);
         /* -------------------------------------------------- */
 
         float rayScaleMultiplier = RayScale;
         /* As rayScaleMultiplier grows, the rays should become more transparent to avoid filling the screen with ugly white blob. */
         float scaleOpacityFactor = 1f;
-        if (rayScaleMultiplier > DefaultRayScale)
+        if (rayScaleMultiplier > DefaultRayScale) // TODO: Make this based on the percentage of the screen the rays take up instead of an arbitrarily chosen default value.
         {
             scaleOpacityFactor = 1f - Math.Abs(rayScaleMultiplier - DefaultRayScale);
             scaleOpacityFactor = Utility.Clamp(scaleOpacityFactor, 0.5f, 1f);
@@ -224,7 +273,7 @@ public class RayManager : IDisposable
             rayColour *= ModEntry.Config.RayOpacityModifier;
 
             /* This also makes the rays fade out when the player is standing beneath a cloud. */
-            rayColour *= CloudCoverOpacityFactor;
+            if (ModEntry.Config.FadeUnderClouds) rayColour *= CloudCoverOpacityFactor;
             // TODO: Scale the CloudCoverOpacityFactor based on how much of the screen real-estate the rays take up. Rays taking up the whole screen should probably not be hidden by a cloud that takes up only a small fraction of the screen.
             
             /* First we offset each ray by a random amount so they're not all stacked or immediately side by side. */
@@ -281,7 +330,7 @@ public class RayManager : IDisposable
             /* This will wrap the rays around to the other edge of the map if they're drawn too far off-screen. */
             while (rayXPosition < -sourceRect.Width * finalDrawScale)
             {
-                rayXPosition += location.Map.DisplayWidth + sourceRect.Width * finalDrawScale;
+                rayXPosition += Game1.currentLocation.Map.DisplayWidth + sourceRect.Width * finalDrawScale;
             }
             /* Otherwise, the horizontal offset above will mean fewer rays the further down in the map you are. */
             
@@ -308,6 +357,7 @@ public class RayManager : IDisposable
     private void OnWarped(object? sender, WarpedEventArgs e)
     {
         RaySeed = (int)Game1.currentGameTime.TotalGameTime.TotalMilliseconds;
+        Game1.hudMessages.RemoveWhere(msg => msg.message is "Godrays enabled in this location." or "Godrays disabled in this location.");
     }
     
     private void OnAssetsInvalidated(object? sender, AssetsInvalidatedEventArgs e)
@@ -327,6 +377,7 @@ public class RayManager : IDisposable
     
     public void Dispose()
     {
+        ModEntry.ModHelper.Events.Input.ButtonPressed -= OnButtonPressed;
         ModEntry.ModHelper.Events.GameLoop.UpdateTicked -= UpdateValues;
         ModEntry.ModHelper.Events.Display.RenderedWorld -= OnRenderedWorld;
         ModEntry.ModHelper.Events.Player.Warped -= OnWarped;
