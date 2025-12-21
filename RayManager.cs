@@ -133,9 +133,9 @@ public class RayManager : IDisposable
 
     private void CheckForCloudCover()
     {
-        if (Game1.currentLocation is not { IsOutdoors: true } location) return;
+        if (!ShouldDrawRays) return;
         
-        IsInCloudCover = location.critters.Any(c =>
+        IsInCloudCover = Game1.currentLocation.critters.Any(c =>
         {
             if (c is not Cloud cloud) return false;
             var cloudBB = cloud.getBoundingBox(0, 0);
