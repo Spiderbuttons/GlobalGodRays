@@ -1,16 +1,19 @@
 ﻿using GenericModConfigMenu;
 using StardewModdingAPI;
+using StardewModdingAPI.Utilities;
 
 namespace GlobalGodRays.Config;
 
 public sealed class ModConfig
 {
+    public KeybindList ToggleLocationKey { get; set; } = new(SButton.None);
     public string RayStyle { get; set; } = "Vanilla";
     public float RayScale { get; set; } = 0.25f;
     public float RayIntensity { get; set; } = 4f;
     public float RayAnimationSpeed { get; set; } = 20f;
     
     public float RayOpacityModifier { get; set; } = 1f;
+    public bool FadeUnderClouds { get; set; } = true;
 
     public ModConfig()
     {
@@ -19,6 +22,7 @@ public sealed class ModConfig
 
     private void Init()
     {
+        ToggleLocationKey = new KeybindList(SButton.None);
         RayStyle = "Vanilla";
         RayScale = 0.65f;
         RayIntensity = 4f;
@@ -34,35 +38,42 @@ public sealed class ModConfig
             save: () => Helper.WriteConfig(this)
         );
         
+        configMenu.AddKeybindList(
+            mod: ModManifest,
+            name: () => "Toggle Location Godrays",
+            tooltip: () => "Press this key to toggle whether godrays are shown in the current location.",
+            getValue: () => ToggleLocationKey,
+            setValue: value => ToggleLocationKey = value
+        );
+        
         configMenu.AddTextOption(
             mod: ModManifest,
             name: () => "Ray Style",
-            tooltip: () => "Changes the texture used for drawing the godrays. If you change this, you will likely want to adjust the Ray Scale setting as well.",
+            tooltip: () => "Changes the texture used for drawing the godrays.",
             getValue: () => RayStyle,
             setValue: value =>
             {
                 RayStyle = value;
-                RayScale = value is "Vanilla" ? 0.65f : 0.25f;
                 ModEntry.RayManager?.UpdateValues(null, null);
             },
             allowedValues: ["Vanilla", "HiRes"]
         );
+        
+        configMenu.AddParagraph(
+            mod: ModManifest,
+            text: () => "Note: If you change the Ray Style, you will likely want to adjust the Ray Scale Multiplier as well."
+        );
 
         configMenu.AddNumberOption(
             mod: ModManifest,
-            name: () => "Ray Scale",
+            name: () => "Ray Scale Multiplier",
             tooltip: () => "Adjusts the size of the godrays. Higher values make them cover more of the screen. Lower values make them cover less of the screen. Rays are also more transparent the bigger they are than the default value.",
             getValue: () => RayScale,
             setValue: value => RayScale = value,
             min: 0.1f,
             max: 3.0f,
             interval: 0.05f,
-            formatValue: value =>
-            {
-                float baseScale = RayStyle is "Vanilla" ? 0.65f : 0.25f;
-                float percentage = value / baseScale * 100f;
-                return $"{percentage:0}%";
-            });
+            formatValue: value => $"{value}x");
 
         configMenu.AddNumberOption(
             mod: ModManifest,
@@ -73,13 +84,8 @@ public sealed class ModConfig
             setValue: value => RayIntensity = value,
             min: 1f,
             max: 32f,
-            interval: 1f,
-            formatValue: value =>
-            {
-                float baseIntensity = 4f;
-                float percentage = value / baseIntensity * 100f;
-                return $"{percentage:0}%";
-            });
+            interval: 1f
+        );
         
         configMenu.AddNumberOption(
             mod: ModManifest,
@@ -89,13 +95,8 @@ public sealed class ModConfig
             setValue: value => RayAnimationSpeed = value,
             min: 1f,
             max: 100f,
-            interval: 1f,
-            formatValue: value =>
-            {
-                float baseSpeed = 20f;
-                float percentage = value / baseSpeed * 100f;
-                return $"{percentage:0}%";
-            });
+            interval: 1f
+        );
         
         configMenu.AddNumberOption(
             mod: ModManifest,
@@ -106,11 +107,15 @@ public sealed class ModConfig
             min: 0.1f,
             max: 3f,
             interval: 0.1f,
-            formatValue: value =>
-            {
-                float percentage = value * 100f;
-                return $"{percentage:0}%";
-            }
+            formatValue: value => $"{value}x"
+        );
+        
+        configMenu.AddBoolOption(
+            mod: ModManifest,
+            name: () => "Fade Under Clouds",
+            tooltip: () => "If enabled, godrays will fade out when standing under a cloud shadow.",
+            getValue: () => FadeUnderClouds,
+            setValue: value => FadeUnderClouds = value
         );
     }
 }
