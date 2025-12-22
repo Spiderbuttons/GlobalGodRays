@@ -1,22 +1,22 @@
 ﻿{
-  "GodraysEnabled": "Godrays enabled in this location.",
-  "GodraysDisabled": "Godrays disabled in this location.",
+  "GodraysEnabled": "God rays enabled in this location.",
+  "GodraysDisabled": "God rays disabled in this location.",
   
-  "ToggleLocationKey_Name": "Toggle Location Godrays",
-  "ToggleLocationKey_Tooltip": "Press this key to toggle whether godrays are shown in the current location.",
+  "ToggleLocationKey_Name": "Toggle Location God rays",
+  "ToggleLocationKey_Tooltip": "Press this key to toggle whether god rays are shown in the current location.",
   
   "RayScale_Name": "Ray Scale",
-  "RayScale_Tooltip": "Adjusts the size of the godrays. Higher values make them cover more of the screen. Lower values make them cover less of the screen. Larger rays become more transparent to avoid blinding white lights.",
+  "RayScale_Tooltip": "Adjusts the size of the god rays. Higher values make them cover more of the screen. Lower values make them cover less of the screen. Larger rays become more transparent to avoid blinding white lights.",
   
   "RayIntensity_Name": "Ray Intensity",
-  "RayIntensity_Tooltip": "Adjusts the density and number of the godrays. Higher values means more godrays that are closer together. Lower values means fewer godrays that are further apart.",
+  "RayIntensity_Tooltip": "Adjusts the density and number of the god rays. Higher values means more god rays that are closer together. Lower values means fewer god rays that are further apart.",
   
   "RayAnimationSpeed_Name": "Ray Animation Speed",
-  "RayAnimationSpeed_Tooltip": "Adjusts how fast the godrays move across the screen. Higher values make them move faster. Lower values make them move slower.",
+  "RayAnimationSpeed_Tooltip": "Adjusts how fast the god rays move across the screen. Higher values make them move faster. Lower values make them move slower.",
   
   "RayOpacityModifier_Name": "Ray Opacity",
-  "RayOpacityModifier_Tooltip": "Adjusts the overall opacity of the godrays. Higher values make them more opaque. Lower values make them more transparent.",
+  "RayOpacityModifier_Tooltip": "Adjusts the overall opacity of the god rays. Higher values make them more opaque. Lower values make them more transparent.",
   
   "FadeUnderClouds_Name": "Fade Under Clouds",
-  "FadeUnderClouds_Tooltip": "If enabled, godrays will fade out when standing under a cloud shadow."
+  "FadeUnderClouds_Tooltip": "If enabled, god rays will fade out when standing under a cloud shadow."
 }
