@@ -29,7 +29,6 @@ namespace GlobalGodRays
             Helper.Events.GameLoop.GameLaunched += OnGameLaunched;
             Helper.Events.GameLoop.SaveLoaded += OnSaveLoaded;
             Helper.Events.GameLoop.ReturnedToTitle += OnReturnedToTitle;
-            Helper.Events.GameLoop.DayStarted += OnDayStarted;
         }
 
         private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
@@ -55,24 +54,6 @@ namespace GlobalGodRays
         {
             var configMenu = Helper.ModRegistry.GetApi<IGenericModConfigMenuApi>("spacechase0.GenericModConfigMenu");
             if (configMenu != null) Config.SetupConfig(configMenu, ModManifest, Helper);
-            LogCommWarning();
-        }
-
-        private void LogCommWarning()
-        {
-            StringBuilder commWarning = new StringBuilder();
-            commWarning.AppendLine();
-            commWarning.AppendLine($@"/* ----------------------------------------------------------------- *\");
-            commWarning.AppendLine($@"/*                                                                   *\");
-            commWarning.AppendLine($@"/*    This is a commissioned mod that has not yet been paid for!     *\");
-            commWarning.AppendLine($@"/*                                                                   *\");
-            commWarning.AppendLine($@"/* ----------------------------------------------------------------- *\");
-            Log.Alert(commWarning.ToString());
-        }
-
-        private void OnDayStarted(object? sender, DayStartedEventArgs e)
-        {
-            LogCommWarning();
         }
 
         private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
