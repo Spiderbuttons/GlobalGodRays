@@ -4,6 +4,6 @@
     "Version": "1.0.0",
     "Description": "Render gorgeous sun beams in outdoor locations during the day.",
     "UniqueID": "Spiderbuttons.GlobalGodRays",
-    "EntryDll": "GlobalGodRays.dll",
-    "UpdateKeys": []
+    "EntryDll": "GlobalGodRays.dll", 
+    "UpdateKeys": [ "Nexus:40483" ]
 }
