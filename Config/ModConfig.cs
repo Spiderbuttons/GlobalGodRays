@@ -38,16 +38,16 @@ public sealed class ModConfig
         
         configMenu.AddKeybindList(
             mod: ModManifest,
-            name: () => "Toggle Location Godrays",
-            tooltip: () => "Press this key to toggle whether godrays are shown in the current location.",
+            name: i18n.ToggleLocationKeyName,
+            tooltip: i18n.ToggleLocationKeyTooltip,
             getValue: () => ToggleLocationKey,
             setValue: value => ToggleLocationKey = value
         );
 
         configMenu.AddNumberOption(
             mod: ModManifest,
-            name: () => "Ray Scale Multiplier",
-            tooltip: () => "Adjusts the size of the godrays. Higher values make them cover more of the screen. Lower values make them cover less of the screen. Rays are also more transparent the bigger they are than the default value.",
+            name: i18n.RayScaleName,
+            tooltip: i18n.RayScaleTooltip,
             getValue: () => RayScale,
             setValue: value => RayScale = value,
             min: 0.1f,
@@ -57,9 +57,8 @@ public sealed class ModConfig
 
         configMenu.AddNumberOption(
             mod: ModManifest,
-            name: () => "Ray Intensity",
-            tooltip: () =>
-                "Adjusts the density and number of the godrays. Higher values means more godrays that are closer together. Lower values means fewer godrays that are further apart.",
+            name: i18n.RayIntensityName,
+            tooltip: i18n.RayIntensityTooltip,
             getValue: () => RayIntensity,
             setValue: value => RayIntensity = value,
             min: 1f,
@@ -69,8 +68,8 @@ public sealed class ModConfig
         
         configMenu.AddNumberOption(
             mod: ModManifest,
-            name: () => "Ray Animation Speed",
-            tooltip: () => "Adjusts how fast the godrays move across the screen. Higher values make them move faster. Lower values make them move slower.",
+            name: i18n.RayAnimationSpeedName,
+            tooltip: i18n.RayAnimationSpeedTooltip,
             getValue: () => RayAnimationSpeed,
             setValue: value => RayAnimationSpeed = value,
             min: 1f,
@@ -80,8 +79,8 @@ public sealed class ModConfig
         
         configMenu.AddNumberOption(
             mod: ModManifest,
-            name: () => "Ray Opacity Multiplier",
-            tooltip: () => "Adjusts the overall opacity of the godrays. Higher values make them more opaque. Lower values make them more transparent.",
+            name: i18n.RayOpacityModifierName,
+            tooltip: i18n.RayOpacityModifierTooltip,
             getValue: () => RayOpacityModifier,
             setValue: value => RayOpacityModifier = value,
             min: 0.1f,
@@ -92,8 +91,8 @@ public sealed class ModConfig
         
         configMenu.AddBoolOption(
             mod: ModManifest,
-            name: () => "Fade Under Clouds",
-            tooltip: () => "If enabled, godrays will fade out when standing under a cloud shadow.",
+            name: i18n.FadeUnderCloudsName,
+            tooltip: i18n.FadeUnderCloudsTooltip,
             getValue: () => FadeUnderClouds,
             setValue: value => FadeUnderClouds = value
         );

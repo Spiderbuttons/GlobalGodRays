@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using GlobalGodRays.Helpers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
 using StardewValley.BellsAndWhistles;
@@ -15,6 +13,7 @@ namespace GlobalGodRays;
 public class RayManager : IDisposable
 {
     public const string ASSET_NAME = "Spiderbuttons.GodRays/Rays";
+    private const string OVERRIDE_FILE_NAME = "location_overrides.json";
     
     private static Dictionary<string, bool>? _locationOverrides;
     private static Dictionary<string, bool> LocationOverrides {
@@ -23,7 +22,7 @@ public class RayManager : IDisposable
             {
                 try
                 {
-                    _locationOverrides = ModEntry.ModHelper.ModContent.Load<Dictionary<string, bool>>("location_overrides.json");
+                    _locationOverrides = ModEntry.ModHelper.ModContent.Load<Dictionary<string, bool>>(OVERRIDE_FILE_NAME);
                 }
                 catch
                 {
@@ -101,23 +100,23 @@ public class RayManager : IDisposable
         if (!ModEntry.Config.ToggleLocationKey.JustPressed() || Game1.currentLocation is not { } location) return;
         
         bool normallyAllowed = location.IsOutdoors;
-        Game1.hudMessages.RemoveWhere(msg => msg.message is "Godrays enabled in this location." or "Godrays disabled in this location.");
+        Game1.hudMessages.RemoveWhere(msg => msg.message.Equals(i18n.GodraysEnabled()) || msg.message.Equals(i18n.GodraysDisabled()));
         if (LocationOverrides.ContainsKey(location.Name))
         {
             bool isEnabled = !LocationOverrides[location.Name];
             LocationOverrides.Remove(location.Name);
-            Game1.addHUDMessage(new HUDMessage($"Godrays {(isEnabled ? "enabled" : "disabled")} in this location.", isEnabled ? HUDMessage.newQuest_type : HUDMessage.error_type));
+            Game1.addHUDMessage(new HUDMessage(isEnabled ? i18n.GodraysEnabled() : i18n.GodraysDisabled(), isEnabled ? HUDMessage.newQuest_type : HUDMessage.error_type));
         }
         else
         {
             LocationOverrides.Add(location.Name, !normallyAllowed);
             bool isEnabled = LocationOverrides[location.Name];
-            Game1.addHUDMessage(new HUDMessage($"Godrays {(isEnabled ? "enabled" : "disabled")} in this location.", isEnabled ? HUDMessage.newQuest_type : HUDMessage.error_type));
+            Game1.addHUDMessage(new HUDMessage(isEnabled ? i18n.GodraysEnabled() : i18n.GodraysDisabled(), isEnabled ? HUDMessage.newQuest_type : HUDMessage.error_type));
         }
-        ModEntry.ModHelper.Data.WriteJsonFile("location_overrides.json", LocationOverrides.Any() ? LocationOverrides : null);
+        ModEntry.ModHelper.Data.WriteJsonFile(OVERRIDE_FILE_NAME, LocationOverrides.Any() ? LocationOverrides : null);
     }
 
-    public void UpdateValues(object? sender, UpdateTickedEventArgs? e)
+    private void UpdateValues(object? sender, UpdateTickedEventArgs? e)
     {
         if (!ShouldDrawRays) return;
         
@@ -272,7 +271,6 @@ public class RayManager : IDisposable
 
             /* This also makes the rays fade out when the player is standing beneath a cloud. */
             if (ModEntry.Config.FadeUnderClouds) rayColour *= CloudCoverOpacityFactor;
-            // TODO: Scale the CloudCoverOpacityFactor based on how much of the screen real-estate the rays take up. Rays taking up the whole screen should probably not be hidden by a cloud that takes up only a small fraction of the screen.
             
             /* First we offset each ray by a random amount so they're not all stacked or immediately side by side. */
             float offset = Utility.Lerp(0f - Utility.RandomFloat(24f, 32f, random), 0f, deg / 360f);
@@ -343,7 +341,7 @@ public class RayManager : IDisposable
     private void OnWarped(object? sender, WarpedEventArgs e)
     {
         RaySeed = (int)Game1.currentGameTime.TotalGameTime.TotalMilliseconds;
-        Game1.hudMessages.RemoveWhere(msg => msg.message is "Godrays enabled in this location." or "Godrays disabled in this location.");
+        Game1.hudMessages.RemoveWhere(msg => msg.message.Equals(i18n.GodraysEnabled()) || msg.message.Equals(i18n.GodraysDisabled()));
     }
     
     private void OnAssetsInvalidated(object? sender, AssetsInvalidatedEventArgs e)
