@@ -40,12 +40,7 @@ namespace GlobalGodRays
 
         private void OnAssetRequested(object? sender, AssetRequestedEventArgs e)
         {
-            if (e.NameWithoutLocale.IsEquivalentTo("Spiderbuttons.GodRays/LightRays"))
-            {
-                e.LoadFromModFile<Texture2D>("assets/LightRays.png", AssetLoadPriority.Medium);
-            }
-
-            if (e.NameWithoutLocale.IsEquivalentTo("Spiderbuttons.GodRays/HiResRays"))
+            if (e.NameWithoutLocale.IsEquivalentTo("Spiderbuttons.GodRays/RayTexture"))
             {
                 e.LoadFromModFile<Texture2D>("assets/HiResRays.png", AssetLoadPriority.Medium);
             }

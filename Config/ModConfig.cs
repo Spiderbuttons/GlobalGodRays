@@ -7,7 +7,6 @@ namespace GlobalGodRays.Config;
 public sealed class ModConfig
 {
     public KeybindList ToggleLocationKey { get; set; } = new(SButton.None);
-    public string RayStyle { get; set; } = "Vanilla";
     public float RayScale { get; set; } = 0.25f;
     public float RayIntensity { get; set; } = 4f;
     public float RayAnimationSpeed { get; set; } = 20f;
@@ -23,7 +22,6 @@ public sealed class ModConfig
     private void Init()
     {
         ToggleLocationKey = new KeybindList(SButton.None);
-        RayStyle = "Vanilla";
         RayScale = 0.65f;
         RayIntensity = 4f;
         RayAnimationSpeed = 20f;
@@ -45,24 +43,6 @@ public sealed class ModConfig
             getValue: () => ToggleLocationKey,
             setValue: value => ToggleLocationKey = value
         );
-        
-        configMenu.AddTextOption(
-            mod: ModManifest,
-            name: () => "Ray Style",
-            tooltip: () => "Changes the texture used for drawing the godrays.",
-            getValue: () => RayStyle,
-            setValue: value =>
-            {
-                RayStyle = value;
-                ModEntry.RayManager?.UpdateValues(null, null);
-            },
-            allowedValues: ["Vanilla", "HiRes"]
-        );
-        
-        configMenu.AddParagraph(
-            mod: ModManifest,
-            text: () => "Note: If you change the Ray Style, you will likely want to adjust the Ray Scale Multiplier as well."
-        );
 
         configMenu.AddNumberOption(
             mod: ModManifest,
@@ -71,9 +51,9 @@ public sealed class ModConfig
             getValue: () => RayScale,
             setValue: value => RayScale = value,
             min: 0.1f,
-            max: 3.0f,
-            interval: 0.05f,
-            formatValue: value => $"{value}x");
+            max: 1.0f,
+            interval: 0.01f,
+            formatValue: value => $"{value * 100f:0}%");
 
         configMenu.AddNumberOption(
             mod: ModManifest,

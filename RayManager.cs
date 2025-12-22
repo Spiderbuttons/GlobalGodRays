@@ -36,10 +36,8 @@ public class RayManager : IDisposable
                                        ? isEnabled
                                        : Game1.currentLocation.IsOutdoors);
 
-    private Texture2D? _vanillaRayTexture;
-    private Texture2D VanillaRayTexture => _vanillaRayTexture ??= Game1.content.Load<Texture2D>("Spiderbuttons.GodRays/LightRays");
-    private Texture2D? _hiResRayTexture;
-    private Texture2D HiResRayTexture => _hiResRayTexture ??= Game1.content.Load<Texture2D>("Spiderbuttons.GodRays/HiResRays");
+    private Texture2D? _rayTexture;
+    private Texture2D RayTexture => _rayTexture ??= Game1.content.Load<Texture2D>("Spiderbuttons.GodRays/RayTexture");
     
     private int RaySeed;
 
@@ -59,13 +57,10 @@ public class RayManager : IDisposable
     private static readonly Color NightColour = Color.White;
 
     private Color RayColour = DaytimeColour;
-    
-    private string RayStyle => ModEntry.Config.RayStyle;
-    private Texture2D RayTexture => RayStyle.Equals("Vanilla") ? VanillaRayTexture : HiResRayTexture;
 
-    private float MORNING_ANGLE => RayStyle.Equals("Vanilla") ? 0f : 45f;
-    private float NOON_ANGLE => RayStyle.Equals("Vanilla") ? -27f : 0f;
-    private float NIGHT_ANGLE => RayStyle.Equals("Vanilla") ? -27f * 2 : -MORNING_ANGLE;
+    private float MORNING_ANGLE => 45f;
+    private float NOON_ANGLE => 0f;
+    private float NIGHT_ANGLE => -MORNING_ANGLE;
 
     private int MorningTime => 600;
     private int NoonTime => 1200;
@@ -343,8 +338,8 @@ public class RayManager : IDisposable
                 sourceRectangle: sourceRect,
                 color: rayColour,
                 rotation: TimeBasedRotation,
-                origin: RayStyle.Equals("Vanilla") ? new Vector2(sourceRect.Width / 2f, 0) : new Vector2(sourceRect.Width / 2f, 96f * finalDrawScale),
-                scale: new Vector2(finalDrawScale, finalDrawScale),
+                origin: new Vector2(sourceRect.Width / 2f, 96f),
+                scale: finalDrawScale,
                 effects: SpriteEffects.None,
                 layerDepth: 1f
             );
@@ -363,14 +358,9 @@ public class RayManager : IDisposable
     private void OnAssetsInvalidated(object? sender, AssetsInvalidatedEventArgs e)
     {
         /* I really doubt anyone is ever gonna retexture these, but... you never know, I guess. */
-        if (e.NamesWithoutLocale.Any(a => a.IsEquivalentTo("Spiderbuttons.GodRays/LightRays")))
+        if (e.NamesWithoutLocale.Any(a => a.IsEquivalentTo("Spiderbuttons.GodRays/RayTexture")))
         {
-            _vanillaRayTexture = null;
-        }
-        
-        if (e.NamesWithoutLocale.Any(a => a.IsEquivalentTo("Spiderbuttons.GodRays/HiResRays")))
-        {
-            _hiResRayTexture = null;
+            _rayTexture = null;
         }
         /* ------------------------------------------------------------------------------------ */
     }
