@@ -14,6 +14,8 @@ namespace GlobalGodRays;
 
 public class RayManager : IDisposable
 {
+    public const string ASSET_NAME = "Spiderbuttons.GodRays/Rays";
+    
     private static Dictionary<string, bool>? _locationOverrides;
     private static Dictionary<string, bool> LocationOverrides {
         get {
@@ -37,7 +39,7 @@ public class RayManager : IDisposable
                                        : Game1.currentLocation.IsOutdoors);
 
     private Texture2D? _rayTexture;
-    private Texture2D RayTexture => _rayTexture ??= Game1.content.Load<Texture2D>("Spiderbuttons.GodRays/RayTexture");
+    private Texture2D RayTexture => _rayTexture ??= Game1.content.Load<Texture2D>(ASSET_NAME);
     
     private int RaySeed;
 
@@ -347,7 +349,7 @@ public class RayManager : IDisposable
     private void OnAssetsInvalidated(object? sender, AssetsInvalidatedEventArgs e)
     {
         /* I really doubt anyone is ever gonna retexture these, but... you never know, I guess. */
-        if (e.NamesWithoutLocale.Any(a => a.IsEquivalentTo("Spiderbuttons.GodRays/RayTexture")))
+        if (e.NamesWithoutLocale.Any(a => a.IsEquivalentTo(ASSET_NAME)))
         {
             _rayTexture = null;
         }
