@@ -42,7 +42,6 @@ public class RayManager : IDisposable
     private int RaySeed;
 
     /* This controls how large the rays are drawn on screen. Larger rays are also more transparent. */
-    private float DefaultRayScale => RayStyle.Equals("Vanilla") ? 0.65f : 0.25f;
     private float RayScale => ModEntry.Config.RayScale;
     
     /* This controls how dense and numerous the light rays are. */
@@ -235,11 +234,13 @@ public class RayManager : IDisposable
         float rayScaleMultiplier = RayScale;
         /* As rayScaleMultiplier grows, the rays should become more transparent to avoid filling the screen with ugly white blob. */
         float scaleOpacityFactor = 1f;
-        if (rayScaleMultiplier > DefaultRayScale) // TODO: Make this based on the percentage of the screen the rays take up instead of an arbitrarily chosen default value.
+        float tallestRayHeight = 1015f;
+        float defaultRayScale = Game1.graphics.GraphicsDevice.Viewport.Height * 0.6f / (3 * tallestRayHeight);
+        if (rayScaleMultiplier > defaultRayScale)
         {
-            scaleOpacityFactor = 1f - Math.Abs(rayScaleMultiplier - DefaultRayScale);
+            scaleOpacityFactor = 1.1f - Math.Abs(rayScaleMultiplier - defaultRayScale);
             scaleOpacityFactor = Utility.Clamp(scaleOpacityFactor, 0.5f, 1f);
-            drawColour *= scaleOpacityFactor / (RayStyle is "Vanilla" ? 0.75f : 1f);
+            drawColour *= scaleOpacityFactor;
         }
         /* ---------------------------------------------------------------------------------------------------------------------- */
 
@@ -274,16 +275,11 @@ public class RayManager : IDisposable
             /* First we offset each ray by a random amount so they're not all stacked or immediately side by side. */
             float offset = Utility.Lerp(0f - Utility.RandomFloat(24f, 32f, random), 0f, deg / 360f);
 
-            int chosenRay = random.Next(0, RayStyle.Equals("Vanilla") ? 2 : 3);
-            Rectangle sourceRect = RayStyle switch
-            {
-                "Vanilla" => new Rectangle(128 * chosenRay, 0, 128, 128),
-                _ => chosenRay switch
-                {
-                    0 => new Rectangle(230, 0, 100, 850),
-                    1 => new Rectangle(575, 0, 215, 1015),
-                    _ => new Rectangle(1065, 0, 630, 1000),
-                },
+            int chosenRay = random.Next(0, 3);
+            Rectangle sourceRect = chosenRay switch {
+                0 => new Rectangle(230, 0, 100, 850),
+                1 => new Rectangle(575, 0, 215, 1015),
+                _ => new Rectangle(1065, 0, 630, 1000),
             };
 
             float nearFinalDrawScale = zoomFactor * rayScaleMultiplier * Utility.RandomFloat(0.85f, 1.15f, random);
@@ -309,17 +305,10 @@ public class RayManager : IDisposable
             } else {
                 currentVerticalOffset = noonVerticalOffset;
             }
-            /* The smaller the rays, the less the position of the viewport influences all of the above scrolling compensation. */
-            float percentageOfViewportHeight = sourceRect.Height * finalDrawScale / Game1.graphics.GraphicsDevice.Viewport.Height;
-            if (percentageOfViewportHeight < 1f)
-            {
-                currentVerticalOffset *= percentageOfViewportHeight / 1.5f;
-                horizontalMovementOffset *= percentageOfViewportHeight / 1.5f;
-            }
 
             offset += horizontalMovementOffset + currentVerticalOffset;
             
-            float rayXPosition = (i * (sourceRect.Width / 4f / LightrayIntensity) - offset) * zoomFactor;
+            float rayXPosition = (i * (sourceRect.Width / zoomFactor / LightrayIntensity) - offset) * zoomFactor;
             float rayYPosition = Utility.RandomFloat(0f, -32f * zoomFactor, random);
             
             /* This will wrap the rays around to the other edge of the map if they're drawn too far off-screen. */
