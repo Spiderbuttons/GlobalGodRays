@@ -7,11 +7,11 @@ namespace GlobalGodRays.Config;
 public sealed class ModConfig
 {
     public KeybindList ToggleLocationKey { get; set; } = new(SButton.None);
-    public float RayScale { get; set; } = 0.25f;
+    public float RayScale { get; set; } = 0.65f;
     public float RayIntensity { get; set; } = 4f;
     public float RayAnimationSpeed { get; set; } = 20f;
     
-    public float RayOpacityModifier { get; set; } = 1f;
+    public float RayOpacityModifier { get; set; } = 1.2f;
     public bool FadeUnderClouds { get; set; } = true;
 
     public ModConfig()
