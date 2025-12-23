@@ -13,6 +13,8 @@ public sealed class ModConfig
     
     public float RayOpacityModifier { get; set; } = 1.2f;
     public bool FadeUnderClouds { get; set; } = true;
+    
+    public bool OnlyWhenSunny { get; set; } = true;
 
     public ModConfig()
     {
@@ -95,6 +97,14 @@ public sealed class ModConfig
             tooltip: i18n.FadeUnderCloudsTooltip,
             getValue: () => FadeUnderClouds,
             setValue: value => FadeUnderClouds = value
+        );
+        
+        configMenu.AddBoolOption(
+            mod: ModManifest,
+            name: i18n.OnlyWhenSunnyName,
+            tooltip: i18n.OnlyWhenSunnyTooltip,
+            getValue: () => OnlyWhenSunny,
+            setValue: value => OnlyWhenSunny = value
         );
     }
 }

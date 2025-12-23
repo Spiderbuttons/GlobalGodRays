@@ -18,5 +18,8 @@
   "RayOpacityModifier_Tooltip": "Adjusts the overall opacity of the god rays. Higher values make them more opaque. Lower values make them more transparent.",
   
   "FadeUnderClouds_Name": "Fade Under Clouds",
-  "FadeUnderClouds_Tooltip": "If enabled, god rays will fade out when standing under a cloud shadow."
+  "FadeUnderClouds_Tooltip": "If enabled, god rays will fade out when standing under a cloud shadow.",
+  
+  "OnlyWhenSunny_Name": "Only When Sunny",
+  "OnlyWhenSunny_Tooltip": "If enabled, god rays will only appear when the weather is sunny.",
 }

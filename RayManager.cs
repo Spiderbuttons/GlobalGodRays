@@ -7,6 +7,7 @@ using StardewModdingAPI.Events;
 using StardewValley;
 using StardewValley.BellsAndWhistles;
 using StardewValley.Extensions;
+using StardewValley.Network;
 
 namespace GlobalGodRays;
 
@@ -33,9 +34,19 @@ public class RayManager : IDisposable
         }
     }
     
-    private bool ShouldDrawRays => Game1.currentLocation is not null && (LocationOverrides.TryGetValue(Game1.currentLocation.Name, out bool isEnabled)
+    private bool IsNotBadWeather
+    {
+        get
+        {
+            GameLocation? loc = Game1.currentLocation;
+            LocationWeather? weather = loc?.GetWeather();
+            return weather is { IsRaining: false, IsLightning: false, IsSnowing: false, IsGreenRain: false };
+        }
+    }
+
+    private bool ShouldDrawRays => Game1.currentLocation is { } location && (LocationOverrides.TryGetValue(location.Name, out bool isEnabled)
                                        ? isEnabled
-                                       : Game1.currentLocation.IsOutdoors);
+                                       : location.IsOutdoors) && (IsNotBadWeather || !ModEntry.Config.OnlyWhenSunny);
 
     private Texture2D? _rayTexture;
     private Texture2D RayTexture => _rayTexture ??= Game1.content.Load<Texture2D>(ASSET_NAME);
