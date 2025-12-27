@@ -32,6 +32,8 @@ public class WeatherConfig
     public float RayOpacityModifier { get; set; } = 1.2f;
     public bool FadeUnderClouds { get; set; } = true;
 
+    public bool OnlyWhenSunny { get; set; } = true;
+
     [JsonConverter(typeof(WeatherConfigConverter))]
     public Dictionary<string, WeatherConfigWithGenericToggle> WeatherSpecificConfigs { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     
@@ -42,32 +44,37 @@ public class WeatherConfig
     
     public bool ShouldSerializeDisableGodRays()
     {
-        return DisableGodRays;
+        return GetType() != typeof(WeatherConfigWithGenericToggle) || DisableGodRays;
     }
     
     public bool ShouldSerializeRayScale()
     {
-        return Math.Abs(RayScale - 0.65f) > 0.001f;
+        return GetType() != typeof(WeatherConfigWithGenericToggle) || Math.Abs(RayScale - 0.65f) > 0.001f;
     }
     
     public bool ShouldSerializeRayIntensity()
     {
-        return Math.Abs(RayIntensity - 4f) > 0.001f;
+        return GetType() != typeof(WeatherConfigWithGenericToggle) || Math.Abs(RayIntensity - 4f) > 0.001f;
     }
     
     public bool ShouldSerializeRayAnimationSpeed()
     {
-        return Math.Abs(RayAnimationSpeed - 20f) > 0.001f;
+        return GetType() != typeof(WeatherConfigWithGenericToggle) || Math.Abs(RayAnimationSpeed - 20f) > 0.001f;
     }
     
     public bool ShouldSerializeRayOpacityModifier()
     {
-        return Math.Abs(RayOpacityModifier - 1f) > 0.001f;
+        return GetType() != typeof(WeatherConfigWithGenericToggle) || Math.Abs(RayOpacityModifier - 1f) > 0.001f;
     }
     
     public bool ShouldSerializeFadeUnderClouds()
     {
-        return !FadeUnderClouds;
+        return GetType() != typeof(WeatherConfigWithGenericToggle) || !FadeUnderClouds;
+    }
+    
+    public bool ShouldSerializeOnlyWhenSunny()
+    {
+        return GetType() != typeof(WeatherConfigWithGenericToggle);
     }
     
     public bool ShouldSerializeWeatherSpecificConfigs()
@@ -89,27 +96,6 @@ public class WeatherConfig
         RayOpacityModifier = 1f;
         FadeUnderClouds = true;
         WeatherSpecificConfigs.Clear();
-        if (GetType() == typeof(WeatherConfigWithGenericToggle)) return;
-        WeatherSpecificConfigs["Rain"] = new WeatherConfigWithGenericToggle
-        {
-            UseGenericSettings = false,
-            DisableGodRays = true
-        };
-        WeatherSpecificConfigs["Storm"] = new WeatherConfigWithGenericToggle
-        {
-            UseGenericSettings = false,
-            DisableGodRays = true
-        };
-        WeatherSpecificConfigs["Snow"] = new WeatherConfigWithGenericToggle
-        {
-            UseGenericSettings = false,
-            DisableGodRays = true
-        };
-        WeatherSpecificConfigs["GreenRain"] = new WeatherConfigWithGenericToggle
-        {
-            UseGenericSettings = false,
-            DisableGodRays = true
-        };
     }
 
     private void SwapToPage(string pageId)
@@ -169,6 +155,14 @@ public class WeatherConfig
     private void SetupGeneric()
     {
         SwapToPage("GenericSettings");
+        
+        ConfigAPI.AddBoolOption(
+            mod: ModEntry.Manifest,
+            name: i18n.OnlyWhenSunnyName,
+            tooltip: i18n.OnlyWhenSunnyTooltip,
+            getValue: () => OnlyWhenSunny,
+            setValue: value => OnlyWhenSunny = value
+        );
         AddOptions(this);
     }
 

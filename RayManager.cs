@@ -8,6 +8,7 @@ using StardewModdingAPI.Events;
 using StardewValley;
 using StardewValley.BellsAndWhistles;
 using StardewValley.Extensions;
+using StardewValley.Network;
 
 namespace GlobalGodRays;
 
@@ -44,14 +45,14 @@ public class RayManager : IDisposable
             return _locationOverrides;
         }
     }
+    
+    private LocationWeather? CurrentWeather => Game1.currentLocation?.GetWeather();
 
     private WeatherConfig CurrentConfig
     {
         get
         {
-            var currentWeather = Game1.currentLocation.GetWeather();
-            
-            if (!ModEntry.Config.WeatherSpecificConfigs.TryGetValue(currentWeather.Weather, out var specificConfig) || specificConfig.UseGenericSettings)
+            if (CurrentWeather is null || !ModEntry.Config.WeatherSpecificConfigs.TryGetValue(CurrentWeather.Weather, out var specificConfig) || specificConfig.UseGenericSettings)
             {
                 return ModEntry.Config;
             }
@@ -59,10 +60,31 @@ public class RayManager : IDisposable
             return specificConfig;
         }
     }
+    
+    private bool IsNotInclementWeather => CurrentWeather is { IsRaining: false, IsLightning: false, IsSnowing: false, IsGreenRain: false };
 
-    private bool ShouldDrawRays => Game1.currentLocation is { } location && (LocationOverrides.TryGetValue(location.Name, out bool isEnabled)
-                                       ? isEnabled
-                                       : location.IsOutdoors && !CurrentConfig.DisableGodRays);
+    private bool ShouldDrawInThisWeather
+    {
+        get
+        {
+            if (CurrentConfig is not WeatherConfigWithGenericToggle specificConfig || specificConfig.UseGenericSettings) return !ModEntry.Config.OnlyWhenSunny;
+            return !specificConfig.DisableGodRays;
+        }
+    }
+
+    private bool ShouldDrawRays
+    {
+        get
+        {
+            if (Game1.currentLocation is not { } loc) return false;
+            if (LocationOverrides.TryGetValue(loc.Name, out bool isEnabled))
+            {
+                return isEnabled && (IsNotInclementWeather || ShouldDrawInThisWeather);
+            }
+            
+            return loc.IsOutdoors && (IsNotInclementWeather || ShouldDrawInThisWeather);
+        }
+    }
 
     private Texture2D? _rayTexture;
     private Texture2D RayTexture => _rayTexture ??= Game1.content.Load<Texture2D>(ASSET_NAME);

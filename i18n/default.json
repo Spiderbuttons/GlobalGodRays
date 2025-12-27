@@ -20,8 +20,8 @@
   "FadeUnderClouds_Name": "Fade Under Clouds",
   "FadeUnderClouds_Tooltip": "If enabled, god rays will fade out when standing under a cloud shadow.",
   
-  "OnlyWhenSunny_Name": "Only When Sunny",
-  "OnlyWhenSunny_Tooltip": "If enabled, god rays will only appear when the weather is sunny.",
+  "OnlyWhenSunny_Name": "Disable in Bad Weather",
+  "OnlyWhenSunny_Tooltip": "If enabled, god rays will not show in inclement weather. For modded weathers, this will depend on whether or not the mod correctly marks its weather as inclement weather.",
   
   "WeatherSettings": "Weather Settings",
   "Generic": "Generic",
