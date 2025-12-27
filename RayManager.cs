@@ -1,18 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using GlobalGodRays.Config;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI.Events;
 using StardewValley;
 using StardewValley.BellsAndWhistles;
 using StardewValley.Extensions;
-using StardewValley.Network;
 
 namespace GlobalGodRays;
 
 public class RayManager : IDisposable
 {
+    public static readonly HashSet<string> VanillaWeatherIds = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Sun",
+        "Wind",
+        "Rain",
+        "Storm",
+        "GreenRain",
+        "Snow",
+        "Festival",
+    };
+    
     public const string ASSET_NAME = "Spiderbuttons.GodRays/Rays";
     private const string OVERRIDE_FILE_NAME = "location_overrides.json";
     
@@ -33,20 +44,25 @@ public class RayManager : IDisposable
             return _locationOverrides;
         }
     }
-    
-    private bool IsNotBadWeather
+
+    private WeatherConfig CurrentConfig
     {
         get
         {
-            GameLocation? loc = Game1.currentLocation;
-            LocationWeather? weather = loc?.GetWeather();
-            return weather is { IsRaining: false, IsLightning: false, IsSnowing: false, IsGreenRain: false };
+            var currentWeather = Game1.currentLocation.GetWeather();
+            
+            if (!ModEntry.Config.WeatherSpecificConfigs.TryGetValue(currentWeather.Weather, out var specificConfig) || specificConfig.UseGenericSettings)
+            {
+                return ModEntry.Config;
+            }
+            
+            return specificConfig;
         }
     }
 
     private bool ShouldDrawRays => Game1.currentLocation is { } location && (LocationOverrides.TryGetValue(location.Name, out bool isEnabled)
                                        ? isEnabled
-                                       : location.IsOutdoors) && (IsNotBadWeather || !ModEntry.Config.OnlyWhenSunny);
+                                       : location.IsOutdoors && !CurrentConfig.DisableGodRays);
 
     private Texture2D? _rayTexture;
     private Texture2D RayTexture => _rayTexture ??= Game1.content.Load<Texture2D>(ASSET_NAME);
@@ -54,13 +70,13 @@ public class RayManager : IDisposable
     private int RaySeed;
 
     /* This controls how large the rays are drawn on screen. Larger rays are also more transparent. */
-    private float RayScale => ModEntry.Config.RayScale;
+    private float RayScale => CurrentConfig.RayScale;
     
     /* This controls how dense and numerous the light rays are. */
-    private float LightrayIntensity => ModEntry.Config.RayIntensity;
+    private float LightrayIntensity => CurrentConfig.RayIntensity;
     
     /* This controls how fast the god rays go through their animation. */
-    private float RayAnimationSpeed => ModEntry.Config.RayAnimationSpeed;
+    private float RayAnimationSpeed => CurrentConfig.RayAnimationSpeed;
     
     private static readonly Color DaytimeColour = new(255, 255, 255);
     private static readonly Color EarlySunsetColour = new(255, 229, 138);
@@ -278,10 +294,10 @@ public class RayManager : IDisposable
             rayColour *= TimeOpacityFactor;
             
             /* And also multiply it by our configurable opacity multiplier, in case all these calculations are not to a user's tastes. */
-            rayColour *= ModEntry.Config.RayOpacityModifier;
+            rayColour *= CurrentConfig.RayOpacityModifier;
 
             /* This also makes the rays fade out when the player is standing beneath a cloud. */
-            if (ModEntry.Config.FadeUnderClouds) rayColour *= CloudCoverOpacityFactor;
+            if (CurrentConfig.FadeUnderClouds) rayColour *= CloudCoverOpacityFactor;
             
             /* First we offset each ray by a random amount so they're not all stacked or immediately side by side. */
             float offset = Utility.Lerp(0f - Utility.RandomFloat(24f, 32f, random), 0f, deg / 360f);
