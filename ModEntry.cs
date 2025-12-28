@@ -52,6 +52,7 @@ namespace GlobalGodRays
 
         private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
         {
+            CloudySkiesApi ??= Helper.ModRegistry.GetApi<ICloudySkiesApi>("leclair.cloudyskies");
             ModHelper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
         }
 
@@ -66,9 +67,8 @@ namespace GlobalGodRays
 
         private void SetupConfig()
         {
-            CloudySkiesApi ??= Helper.ModRegistry.GetApi<ICloudySkiesApi>("leclair.cloudyskies");
             GenericModConfigMenuApi ??= Helper.ModRegistry.GetApi<IGenericModConfigMenuApi>("spacechase0.GenericModConfigMenu");
-            if (GenericModConfigMenuApi != null) Config.SetupConfig();
+            if (GenericModConfigMenuApi != null) Config?.SetupConfig();
         }
 
         private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)

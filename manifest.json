@@ -5,5 +5,19 @@
     "Description": "Render gorgeous sun beams in outdoor locations during the day.",
     "UniqueID": "Spiderbuttons.GlobalGodRays",
     "EntryDll": "GlobalGodRays.dll", 
-    "UpdateKeys": [ "Nexus:40483" ]
+    "UpdateKeys": [ "Nexus:40483" ],
+    "Dependencies": [
+      {
+        "UniqueID": "Kana.WeatherWonders",
+        "IsRequired": false,
+      },
+      {
+        "UniqueID": "leclair.cloudyskies",
+        "IsRequired": false,
+      },
+      {
+        "UniqueID": "Pathoschild.ContentPatcher",
+        "IsRequired": false,
+      },
+    ]
 }

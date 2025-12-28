@@ -9,6 +9,7 @@ using StardewValley;
 using StardewValley.BellsAndWhistles;
 using StardewValley.Extensions;
 using StardewValley.Network;
+using StardewValley.TokenizableStrings;
 
 namespace GlobalGodRays;
 
@@ -67,16 +68,23 @@ public class RayManager : IDisposable
     {
         get
         {
-            if (CurrentConfig is not WeatherConfigWithGenericToggle specificConfig || specificConfig.UseGenericSettings) return !ModEntry.Config.OnlyWhenSunny;
-            return !specificConfig.DisableGodRays;
+            if (CurrentConfig is not WeatherConfigWithGenericToggle specificConfig)
+            {
+                return !CurrentConfig.OnlyWhenSunny || IsNotInclementWeather;
+            }
+            return specificConfig.EnableGodRays;
         }
     }
+
+    private bool AreRaysDisabledByConfig => !CurrentConfig.EnableGodRays;
 
     private bool ShouldDrawRays
     {
         get
         {
             if (Game1.currentLocation is not { } loc) return false;
+            if (AreRaysDisabledByConfig) return false;
+            
             if (LocationOverrides.TryGetValue(loc.Name, out bool isEnabled))
             {
                 return isEnabled && (IsNotInclementWeather || ShouldDrawInThisWeather);
@@ -146,21 +154,57 @@ public class RayManager : IDisposable
 
     private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
     {
-        if (!ModEntry.Config.ToggleLocationKey.JustPressed() || Game1.currentLocation is not { } location) return;
+        if (ModEntry.Config.ToggleLocationKey.JustPressed()) PressLocationToggle();
+        if (ModEntry.Config.ToggleWeatherKey.JustPressed()) PressWeatherToggle();
+    }
+
+    private void PressWeatherToggle()
+    {
+        if (CurrentWeather is null) return;
+        
+        if (!ModEntry.Config.WeatherSpecificConfigs.TryGetValue(CurrentWeather.Weather, out var specificConfig))
+        {
+            specificConfig = new WeatherConfigWithGenericToggle { UseGenericSettings = true };
+            ModEntry.Config.WeatherSpecificConfigs.Add(CurrentWeather.Weather, specificConfig);
+        }
+        
+        string weatherName = CurrentWeather.Weather;
+        if (ModEntry.CloudySkiesApi is not null && !VanillaWeatherIds.Contains(CurrentWeather.Weather))
+        {
+            var csWeather = ModEntry.CloudySkiesApi.GetAllCustomWeather().FirstOrDefault(w => w.Id.Equals(CurrentWeather.Weather, StringComparison.OrdinalIgnoreCase));
+            if (csWeather is not null) weatherName = TokenParser.ParseText(csWeather.DisplayName);
+        }
+
+        string enabledMsg = string.Format(i18n.GodraysEnabled(), weatherName);
+        string disabledMsg = string.Format(i18n.GodraysDisabled(), weatherName);
+        Game1.hudMessages.RemoveWhere(msg => msg.message.Equals(enabledMsg) || msg.message.Equals(disabledMsg));
+        
+        specificConfig.EnableGodRays = !ShouldDrawRays;
+        specificConfig.UseGenericSettings = false;
+        Game1.addHUDMessage(new HUDMessage(specificConfig.EnableGodRays ? enabledMsg : disabledMsg, specificConfig.EnableGodRays ? HUDMessage.newQuest_type : HUDMessage.error_type));
+        
+        ModEntry.ModHelper.WriteConfig(ModEntry.Config);
+    }
+
+    private void PressLocationToggle()
+    {
+        if (Game1.currentLocation is not { } location) return;
         
         bool normallyAllowed = location.IsOutdoors;
-        Game1.hudMessages.RemoveWhere(msg => msg.message.Equals(i18n.GodraysEnabled()) || msg.message.Equals(i18n.GodraysDisabled()));
+        string enabledMsg = string.Format(i18n.GodraysEnabled(), location.Name);
+        string disabledMsg = string.Format(i18n.GodraysDisabled(), location.Name);
+        Game1.hudMessages.RemoveWhere(msg => msg.message.Equals(enabledMsg) || msg.message.Equals(disabledMsg));
         if (LocationOverrides.ContainsKey(location.Name))
         {
             bool isEnabled = !LocationOverrides[location.Name];
             LocationOverrides.Remove(location.Name);
-            Game1.addHUDMessage(new HUDMessage(isEnabled ? i18n.GodraysEnabled() : i18n.GodraysDisabled(), isEnabled ? HUDMessage.newQuest_type : HUDMessage.error_type));
+            Game1.addHUDMessage(new HUDMessage(isEnabled ? enabledMsg : disabledMsg, isEnabled ? HUDMessage.newQuest_type : HUDMessage.error_type));
         }
         else
         {
             LocationOverrides.Add(location.Name, !normallyAllowed);
             bool isEnabled = LocationOverrides[location.Name];
-            Game1.addHUDMessage(new HUDMessage(isEnabled ? i18n.GodraysEnabled() : i18n.GodraysDisabled(), isEnabled ? HUDMessage.newQuest_type : HUDMessage.error_type));
+            Game1.addHUDMessage(new HUDMessage(isEnabled ? enabledMsg : disabledMsg, isEnabled ? HUDMessage.newQuest_type : HUDMessage.error_type));
         }
         ModEntry.ModHelper.Data.WriteJsonFile(OVERRIDE_FILE_NAME, LocationOverrides.Any() ? LocationOverrides : null);
     }

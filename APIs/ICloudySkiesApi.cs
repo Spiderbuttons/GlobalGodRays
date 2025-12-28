@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using StardewValley.Network;
 
 namespace GlobalGodRays.APIs;
@@ -33,8 +34,6 @@ public interface IWeatherData
 	/// </summary>
 	string DisplayName { get; set; }
 
-	#region Behavior - Vanilla Flags
-
 	/// <summary>
 	///     Controls the value of <see cref="LocationWeather.IsRaining" />.
 	/// </summary>
@@ -59,6 +58,4 @@ public interface IWeatherData
 	///     Controls the value of <see cref="LocationWeather.IsGreenRain" />.
 	/// </summary>
 	bool IsGreenRain { get; set; }
-
-	#endregion
 }

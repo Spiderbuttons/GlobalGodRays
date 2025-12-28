@@ -1,9 +1,12 @@
 ﻿{
-  "GodraysEnabled": "God rays enabled in this location.",
-  "GodraysDisabled": "God rays disabled in this location.",
+  "GodraysEnabled": "God rays enabled for {0}.", // {0} will either be the location name or the current weather ID.
+  "GodraysDisabled": "God rays disabled for {0}.",
   
   "ToggleLocationKey_Name": "Toggle Location God rays",
   "ToggleLocationKey_Tooltip": "Press this key to toggle whether god rays are shown in the current location.",
+  
+  "ToggleWeatherKey_Name": "Toggle Current Weather",
+  "ToggleWeatherKey_Tooltip": "Press this key to toggle whether god rays are shown in the current weather.",
   
   "RayScale_Name": "Ray Scale",
   "RayScale_Tooltip": "Adjusts the size of the god rays. Higher values make them cover more of the screen. Lower values make them cover less of the screen. Larger rays become more transparent to avoid blinding white lights.",
@@ -32,8 +35,8 @@
   "VanillaPageTooltip": "Settings for the different vanilla weather types.", // Vanilla as in "not modded" i.e. Rain, Snow, Thunder, etc.
   "ModdedPageTooltip": "Settings for modded weather types currently loaded by other mods.",
   
-  "DisableRays_Name": "Disable God Rays",
-  "DisableRays_Tooltip": "If enabled, god rays will be disabled for this weather type and every setting beneath this will be ignored.",
+  "EnableRays_Name": "Enable God Rays",
+  "EnableRays_Tooltip": "If disabled, god rays will be disabled for this weather type and every setting beneath this will be ignored.",
   
   "UseGenericSettings_Name": "Use Generic Settings",
   "UseGenericSettings_Tooltip": "If enabled, the generic settings will be used and every setting beneath this will be ignored.",

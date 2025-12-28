@@ -24,7 +24,9 @@ public class WeatherConfig
     public ICloudySkiesApi? CloudySkiesApi => ModEntry.CloudySkiesApi;
     
     public KeybindList ToggleLocationKey { get; set; } = new(SButton.None);
-    public bool DisableGodRays { get; set; }
+    
+    public KeybindList ToggleWeatherKey { get; set; } = new(SButton.None);
+    public bool EnableGodRays { get; set; } = true;
     public float RayScale { get; set; } = 0.65f;
     public float RayIntensity { get; set; } = 4f;
     public float RayAnimationSpeed { get; set; } = 20f;
@@ -39,63 +41,99 @@ public class WeatherConfig
     
     public bool ShouldSerializeToggleLocationKey()
     {
-        return GetType() != typeof(WeatherConfigWithGenericToggle);
+        return GetType() == typeof(WeatherConfig);
     }
     
-    public bool ShouldSerializeDisableGodRays()
+    public bool ShouldSerializeToggleWeatherKey()
     {
-        return GetType() != typeof(WeatherConfigWithGenericToggle) || DisableGodRays;
+        return GetType() == typeof(WeatherConfig);
+    }
+    
+    public bool ShouldSerializeEnableGodRays()
+    {
+        return GetType() == typeof(WeatherConfig) || (!DoesPropertyMatchDefault(nameof(EnableGodRays)));
     }
     
     public bool ShouldSerializeRayScale()
     {
-        return GetType() != typeof(WeatherConfigWithGenericToggle) || Math.Abs(RayScale - 0.65f) > 0.001f;
+        return GetType() == typeof(WeatherConfig) || (!DoesPropertyMatchDefault(nameof(RayScale)));
     }
     
     public bool ShouldSerializeRayIntensity()
     {
-        return GetType() != typeof(WeatherConfigWithGenericToggle) || Math.Abs(RayIntensity - 4f) > 0.001f;
+        return GetType() == typeof(WeatherConfig) || (!DoesPropertyMatchDefault(nameof(RayIntensity)));
     }
     
     public bool ShouldSerializeRayAnimationSpeed()
     {
-        return GetType() != typeof(WeatherConfigWithGenericToggle) || Math.Abs(RayAnimationSpeed - 20f) > 0.001f;
+        return GetType() == typeof(WeatherConfig) || (!DoesPropertyMatchDefault(nameof(RayAnimationSpeed)));
     }
     
     public bool ShouldSerializeRayOpacityModifier()
     {
-        return GetType() != typeof(WeatherConfigWithGenericToggle) || Math.Abs(RayOpacityModifier - 1f) > 0.001f;
+        return GetType() == typeof(WeatherConfig) || (!DoesPropertyMatchDefault(nameof(RayOpacityModifier)));
     }
     
     public bool ShouldSerializeFadeUnderClouds()
     {
-        return GetType() != typeof(WeatherConfigWithGenericToggle) || !FadeUnderClouds;
+        return GetType() == typeof(WeatherConfig) || (!DoesPropertyMatchDefault(nameof(FadeUnderClouds)));
     }
     
     public bool ShouldSerializeOnlyWhenSunny()
     {
-        return GetType() != typeof(WeatherConfigWithGenericToggle);
+        return GetType() == typeof(WeatherConfig);
     }
     
     public bool ShouldSerializeWeatherSpecificConfigs()
     {
-        return GetType() != typeof(WeatherConfigWithGenericToggle);
+        return GetType() == typeof(WeatherConfig);
     }
 
     public WeatherConfig()
     {
         Init();
     }
+    
+    public bool DoAllPropertiesMatchDefault()
+    {
+        return DoesPropertyMatchDefault(nameof(EnableGodRays)) &&
+               DoesPropertyMatchDefault(nameof(RayScale)) &&
+               DoesPropertyMatchDefault(nameof(RayIntensity)) &&
+               DoesPropertyMatchDefault(nameof(RayAnimationSpeed)) &&
+               DoesPropertyMatchDefault(nameof(RayOpacityModifier)) &&
+               DoesPropertyMatchDefault(nameof(FadeUnderClouds));
+    }
+    
+    public bool DoesPropertyMatchDefault(string prop)
+    {
+        return prop switch
+        {
+            nameof(EnableGodRays) => EnableGodRays,
+            nameof(RayScale) => Math.Abs(RayScale - 0.65f) < 0.001f,
+            nameof(RayIntensity) => Math.Abs(RayIntensity - 4f) < 0.001f,
+            nameof(RayAnimationSpeed) => Math.Abs(RayAnimationSpeed - 20f) < 0.001f,
+            nameof(RayOpacityModifier) => Math.Abs(RayOpacityModifier - 1f) < 0.001f,
+            nameof(FadeUnderClouds) => FadeUnderClouds,
+            _ => false
+        };
+    }
 
     private void Init()
     {
         ToggleLocationKey = new KeybindList(SButton.None);
+        ToggleWeatherKey = new KeybindList(SButton.None);
+        EnableGodRays = true;
         RayScale = 0.65f;
         RayIntensity = 4f;
         RayAnimationSpeed = 20f;
         RayOpacityModifier = 1f;
         FadeUnderClouds = true;
-        WeatherSpecificConfigs.Clear();
+        OnlyWhenSunny = true;
+        foreach (var weather in WeatherSpecificConfigs)
+        {
+            weather.Value.Init();
+            if (weather.Value is { } specificConfig) specificConfig.UseGenericSettings = true;
+        }
     }
 
     private void SwapToPage(string pageId)
@@ -119,6 +157,14 @@ public class WeatherConfig
             tooltip: i18n.ToggleLocationKeyTooltip,
             getValue: () => ToggleLocationKey,
             setValue: value => ToggleLocationKey = value
+        );
+        
+        ConfigAPI.AddKeybindList(
+            mod: ModEntry.Manifest,
+            name: i18n.ToggleWeatherKeyName,
+            tooltip: i18n.ToggleWeatherKeyTooltip,
+            getValue: () => ToggleWeatherKey,
+            setValue: value => ToggleWeatherKey = value
         );
         
         ConfigAPI.AddPageLink(
@@ -176,8 +222,6 @@ public class WeatherConfig
         
         foreach (var weather in RayManager.VanillaWeatherIds)
         {
-            bool weatherIsBad = weather is "storm" or "rain" or "greenrain" or "snow";
-            
             ConfigAPI.AddPageLink(
                 mod: ModEntry.Manifest,
                 pageId: $"Weather_{weather}",
@@ -190,11 +234,7 @@ public class WeatherConfig
                 pageTitle: () => weather
             );
             
-            WeatherSpecificConfigs.TryAdd(weather, new WeatherConfigWithGenericToggle()
-            {
-                UseGenericSettings = !weatherIsBad,
-                DisableGodRays = weatherIsBad
-            });
+            WeatherSpecificConfigs.TryAdd(weather, new WeatherConfigWithGenericToggle());
             
             ConfigAPI.AddBoolOption(
                 mod: ModEntry.Manifest,
@@ -232,13 +272,18 @@ public class WeatherConfig
             ConfigAPI.AddPageLink(
                 mod: ModEntry.Manifest,
                 pageId: $"Weather_{weather.Id}",
-                text: () => TokenParser.ParseText(weather.DisplayName)
+                text: () => $"{TokenParser.ParseText(weather.DisplayName)}"
             );
             
             ConfigAPI.AddPage(
                 mod: ModEntry.Manifest,
                 pageId: $"Weather_{weather.Id}",
                 pageTitle: () => TokenParser.ParseText(weather.DisplayName)
+            );
+            
+            ConfigAPI.AddSectionTitle(
+                mod: ModEntry.Manifest,
+                text: () => weather.Id
             );
             
             WeatherSpecificConfigs.TryAdd(weather.Id, new WeatherConfigWithGenericToggle());
@@ -260,10 +305,10 @@ public class WeatherConfig
     {
         ConfigAPI.AddBoolOption(
             mod: ModEntry.Manifest,
-            name: i18n.DisableRaysName,
-            tooltip: i18n.DisableRaysTooltip,
-            getValue: () => config.DisableGodRays,
-            setValue: value => config.DisableGodRays = value
+            name: i18n.EnableRaysName,
+            tooltip: i18n.EnableRaysTooltip,
+            getValue: () => config.EnableGodRays,
+            setValue: value => config.EnableGodRays = value
         );
         
         ConfigAPI.AddNumberOption(

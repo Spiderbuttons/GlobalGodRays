@@ -16,7 +16,7 @@ public class WeatherConfigConverter : JsonConverter
 
     public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer)
     {
-        serializer.Serialize(writer, ((Dictionary<string,WeatherConfigWithGenericToggle>)value!).Where(weather => !weather.Value.UseGenericSettings).ToDictionary(weather => weather.Key, weather => weather.Value));
+        serializer.Serialize(writer, ((Dictionary<string,WeatherConfigWithGenericToggle>)value!).Where(weather => !weather.Value.UseGenericSettings || !weather.Value.DoAllPropertiesMatchDefault()).ToDictionary(weather => weather.Key, weather => weather.Value));
     }
 
     public override bool CanRead => false;
