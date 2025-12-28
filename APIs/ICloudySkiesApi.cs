@@ -33,29 +33,4 @@ public interface IWeatherData
 	///     should be referenced by name. This is a tokenizable string.
 	/// </summary>
 	string DisplayName { get; set; }
-
-	/// <summary>
-	///     Controls the value of <see cref="LocationWeather.IsRaining" />.
-	/// </summary>
-	bool IsRaining { get; set; }
-
-	/// <summary>
-	///     Controls the value of <see cref="LocationWeather.IsSnowing" />.
-	/// </summary>
-	bool IsSnowing { get; set; }
-
-	/// <summary>
-	///     Controls the value of <see cref="LocationWeather.IsLightning" />.
-	/// </summary>
-	bool IsLightning { get; set; }
-
-	/// <summary>
-	///     Controls the value of <see cref="LocationWeather.IsDebrisWeather" />.
-	/// </summary>
-	bool IsDebrisWeather { get; set; }
-
-	/// <summary>
-	///     Controls the value of <see cref="LocationWeather.IsGreenRain" />.
-	/// </summary>
-	bool IsGreenRain { get; set; }
 }
