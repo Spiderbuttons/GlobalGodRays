@@ -126,7 +126,7 @@ public class WeatherConfig
         RayScale = 0.65f;
         RayIntensity = 4f;
         RayAnimationSpeed = 20f;
-        RayOpacityModifier = 1f;
+        RayOpacityModifier = 1.2f;
         FadeUnderClouds = true;
         OnlyWhenSunny = true;
         foreach (var weather in WeatherSpecificConfigs)

@@ -5,6 +5,7 @@ using System.Linq;
 using GlobalGodRays.Config;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
 using StardewValley.BellsAndWhistles;
@@ -125,8 +126,8 @@ public class RayManager : IDisposable
         get
         {
             if (_shouldDrawRays is not null) return _shouldDrawRays.Value;
-            
-            if (Game1.currentLocation is null) _shouldDrawRays = false;
+
+            if (Game1.currentLocation is null) return false;
             if (AreRaysDisabledByConfig) _shouldDrawRays = false;
             if (!IsNotInclementWeather && !ShouldDrawInThisWeather) _shouldDrawRays = false;
             if (!ShouldDrawInThisLocation) _shouldDrawRays = false;
@@ -142,13 +143,34 @@ public class RayManager : IDisposable
     private int RaySeed;
 
     /* This controls how large the rays are drawn on screen. Larger rays are also more transparent. */
-    private float RayScale => CurrentConfig.RayScale;
-    
+    private float? RayScale
+    {
+        get
+        {
+            return field ??= CurrentConfig.RayScale;
+        }
+        set => field = value;
+    }
+
     /* This controls how dense and numerous the light rays are. */
-    private float LightrayIntensity => CurrentConfig.RayIntensity;
+    private float? LightrayIntensity
+    {
+        get
+        {
+            return field ??= CurrentConfig.RayIntensity;
+        }
+        set => field = value;
+    }
     
     /* This controls how fast the god rays go through their animation. */
-    private float RayAnimationSpeed => CurrentConfig.RayAnimationSpeed;
+    private float? RayAnimationSpeed 
+    {
+        get
+        {
+            return field ??= CurrentConfig.RayAnimationSpeed;
+        }
+        set => field = value;
+    }
     
     private static readonly Color DaytimeColour = new(255, 255, 255);
     private static readonly Color EarlySunsetColour = new(255, 229, 138);
@@ -157,9 +179,9 @@ public class RayManager : IDisposable
 
     private Color RayColour = DaytimeColour;
 
-    private float MORNING_ANGLE => 45f;
-    private float NOON_ANGLE => 0f;
-    private float NIGHT_ANGLE => -MORNING_ANGLE;
+    private const float MORNING_ANGLE = 45f;
+    private const float NOON_ANGLE = 0f;
+    private const float NIGHT_ANGLE = -MORNING_ANGLE;
 
     private int MorningTime => 600;
     private int NoonTime => 1200;
@@ -186,12 +208,12 @@ public class RayManager : IDisposable
         RaySeed = (int)Game1.currentGameTime.TotalGameTime.TotalMilliseconds;
         
         ModEntry.ModHelper.Events.Input.ButtonPressed += OnButtonPressed;
-        ModEntry.ModHelper.Events.GameLoop.UpdateTicked += UpdateValues;
+        ModEntry.ModHelper.Events.GameLoop.UpdateTicked += UpdateValuesForTime;
         ModEntry.ModHelper.Events.Display.RenderedWorld += OnRenderedWorld;
         ModEntry.ModHelper.Events.Player.Warped += OnWarped;
         ModEntry.ModHelper.Events.Content.AssetsInvalidated += OnAssetsInvalidated;
 
-        UpdateValues(null, null);
+        UpdateValuesForTime(null, null);
     }
 
     private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
@@ -251,7 +273,7 @@ public class RayManager : IDisposable
         ModEntry.ModHelper.Data.WriteJsonFile(OVERRIDE_FILE_NAME, LocationOverrides.Any() ? LocationOverrides : null);
     }
 
-    private void UpdateValues(object? sender, UpdateTickedEventArgs? e)
+    private void UpdateValuesForTime(object? sender, UpdateTickedEventArgs? e)
     {
         if (!ShouldDrawRays) return;
         
@@ -357,32 +379,61 @@ public class RayManager : IDisposable
     {
         if (!ShouldDrawRays || Game1.game1.takingMapScreenshot) return;
         
+        int mapWidth = Game1.currentLocation.Map.DisplayWidth;
+        int gViewportHeight = Game1.graphics.GraphicsDevice.Viewport.Height;
+        
         SpriteBatch b = e.SpriteBatch;
         Random random = Utility.CreateRandom(RaySeed);
         Color drawColour = RayColour;
         
         /* Don't know where the magic numbers come from here. */
-        float zoomFactor = Game1.graphics.GraphicsDevice.Viewport.Height * 0.6f / 128f;
+        float zoomFactor = gViewportHeight * 0.6f / 128f;
         int minRays = -(int)(128f / zoomFactor);
-        int maxRays = Game1.currentLocation.Map.DisplayWidth / (int)(32f / LightrayIntensity * zoomFactor);
+        int maxRays = mapWidth / (int)(32f / LightrayIntensity.GetValueOrDefault() * zoomFactor);
         /* -------------------------------------------------- */
 
-        float rayScaleMultiplier = RayScale;
+        float rayScaleMultiplier = RayScale.GetValueOrDefault();
         /* As rayScaleMultiplier grows, the rays should become more transparent to avoid filling the screen with ugly white blob. */
         float scaleOpacityFactor = 1f;
         float tallestRayHeight = 1015f;
-        float defaultRayScale = Game1.graphics.GraphicsDevice.Viewport.Height * 0.6f / (3 * tallestRayHeight);
+        float defaultRayScale = gViewportHeight * 0.6f / (3 * tallestRayHeight);
         if (rayScaleMultiplier > defaultRayScale)
         {
             scaleOpacityFactor = 1.1f - Math.Abs(rayScaleMultiplier - defaultRayScale);
             scaleOpacityFactor = Utility.Clamp(scaleOpacityFactor, 0.5f, 1f);
             drawColour *= scaleOpacityFactor;
+            if (drawColour.A <= 0) return;
         }
         /* ---------------------------------------------------------------------------------------------------------------------- */
+        
+        float offsetAdjustment = 0f;
+        
+        /* We adjust the offset further depending on where the viewport is on the map, so the rays stay in the same relative location. */
+        float followFactor = 1.05f;
+        float horizontalMovementOffset = Game1.viewport.X / zoomFactor / followFactor;
+            
+        /* Vertical movement makes them move weird unless we compensate by scrolling the animation side to side to cancel it out. */
+        float morningVerticalOffset = Game1.viewport.Y / zoomFactor / followFactor;
+        float noonVerticalOffset = 0f;
+        float nightVerticalOffset = -(Game1.viewport.Y / zoomFactor / followFactor);
+        float currentVerticalOffset;
+            
+        if (CurrentTime < NoonTime)
+        {
+            currentVerticalOffset = Utility.Lerp(morningVerticalOffset, noonVerticalOffset, ProgressToNoon);
+            currentVerticalOffset -= (morningVerticalOffset - noonVerticalOffset) / Utility.CalculateMinutesBetweenTimes(MorningTime, NoonTime) * (MillisecondsPerMinute - MillisecondsToNextMinute) / MillisecondsPerMinute;
+        } else if (CurrentTime > NoonTime) {
+            currentVerticalOffset = Utility.Lerp(noonVerticalOffset, nightVerticalOffset, ProgressToNight);
+            currentVerticalOffset += (nightVerticalOffset - noonVerticalOffset) / Utility.CalculateMinutesBetweenTimes(NoonTime, NightTime) * (MillisecondsPerMinute - MillisecondsToNextMinute) / MillisecondsPerMinute;
+        } else {
+            currentVerticalOffset = noonVerticalOffset;
+        }
+
+        offsetAdjustment += horizontalMovementOffset + currentVerticalOffset;
 
         for (int i = minRays; i < maxRays; i++)
         {
-            float deg = (float)Game1.currentGameTime.TotalGameTime.TotalSeconds * RayAnimationSpeed;
+            float deg = (float)Game1.currentGameTime.TotalGameTime.TotalSeconds * RayAnimationSpeed.GetValueOrDefault();
 
             /* These two lines add some random variation to each ray's movement. */
             deg *= Utility.RandomFloat(0.75f, 1f, random);
@@ -407,9 +458,6 @@ public class RayManager : IDisposable
             /* This also makes the rays fade out when the player is standing beneath a cloud. */
             if (CurrentConfig.FadeUnderClouds) rayColour *= CloudCoverOpacityFactor;
             
-            /* First we offset each ray by a random amount so they're not all stacked or immediately side by side. */
-            float offset = Utility.Lerp(0f - Utility.RandomFloat(24f, 32f, random), 0f, deg / 360f);
-
             int chosenRay = random.Next(0, 3);
             Rectangle sourceRect = chosenRay switch {
                 0 => new Rectangle(230, 0, 100, 850),
@@ -420,38 +468,29 @@ public class RayManager : IDisposable
             float nearFinalDrawScale = zoomFactor * rayScaleMultiplier * Utility.RandomFloat(0.85f, 1.15f, random);
             float finalDrawScale = nearFinalDrawScale;
             
-            /* Then we offset them further depending on where the viewport is on the map, so the rays stay in the same relative location. */
-            float followFactor = 1.05f;
-            float horizontalMovementOffset = Game1.viewport.X / zoomFactor / followFactor;
-            
-            /* Vertical movement makes them move weird unless we compensate by scrolling the animation side to side to cancel it out. */
-            float morningVerticalOffset = Game1.viewport.Y / zoomFactor / followFactor;
-            float noonVerticalOffset = 0f;
-            float nightVerticalOffset = -(Game1.viewport.Y / zoomFactor / followFactor);
-            float currentVerticalOffset;
-            
-            if (CurrentTime < NoonTime)
-            {
-                currentVerticalOffset = Utility.Lerp(morningVerticalOffset, noonVerticalOffset, ProgressToNoon);
-                currentVerticalOffset -= (morningVerticalOffset - noonVerticalOffset) / Utility.CalculateMinutesBetweenTimes(MorningTime, NoonTime) * (MillisecondsPerMinute - MillisecondsToNextMinute) / MillisecondsPerMinute;
-            } else if (CurrentTime > NoonTime) {
-                currentVerticalOffset = Utility.Lerp(noonVerticalOffset, nightVerticalOffset, ProgressToNight);
-                currentVerticalOffset += (nightVerticalOffset - noonVerticalOffset) / Utility.CalculateMinutesBetweenTimes(NoonTime, NightTime) * (MillisecondsPerMinute - MillisecondsToNextMinute) / MillisecondsPerMinute;
-            } else {
-                currentVerticalOffset = noonVerticalOffset;
-            }
+            /* We offset each ray by a random amount so they're not all stacked or immediately side by side. */
+            float offset = Utility.Lerp(0f - Utility.RandomFloat(24f, 32f, random), 0f, deg / 360f);
+            offset += offsetAdjustment;
 
-            offset += horizontalMovementOffset + currentVerticalOffset;
-            
-            float rayXPosition = (i * (sourceRect.Width / zoomFactor / LightrayIntensity) - offset) * zoomFactor;
+            float rayXPosition = (i * (sourceRect.Width / zoomFactor / LightrayIntensity.GetValueOrDefault()) - offset) * zoomFactor;
             float rayYPosition = Utility.RandomFloat(0f, -32f * zoomFactor, random);
             
+            /* We check this here because if we don't do the same number of RNG calls each time, things get fucky. */
+            if (rayColour.A <= 0) continue;
+            
+            /* The angle of the rays means their X position does not fully tell us whether they're on-screen or not. */
+            float extraWidth = sourceRect.Height * finalDrawScale * (float)Math.Cos(TimeBasedRotation);
+            
             /* This will wrap the rays around to the other edge of the map if they're drawn too far off-screen. */
-            while (rayXPosition < -sourceRect.Width * finalDrawScale)
+            while (rayXPosition < -extraWidth) 
             {
-                rayXPosition += Game1.currentLocation.Map.DisplayWidth + sourceRect.Width * finalDrawScale;
+                rayXPosition += mapWidth + extraWidth;
             }
             /* Otherwise, the horizontal offset above will mean fewer rays the further down in the map you are. */
+            
+            /* Discard the ray if it'll end up being drawn off-screen. */
+            if (rayXPosition < -extraWidth || rayXPosition > Game1.graphics.GraphicsDevice.Viewport.Width + extraWidth)
+                continue;
             
             /* Where we're going, we don't need alpha blend mode... */
             b.End();
@@ -497,12 +536,15 @@ public class RayManager : IDisposable
         _shouldDrawInThisLocation = null;
         _isNotInclementWeather = null;
         _shouldDrawRays = null;
+        RayScale = null;
+        LightrayIntensity = null;
+        RayAnimationSpeed = null;
     }
     
     public void Dispose()
     {
         ModEntry.ModHelper.Events.Input.ButtonPressed -= OnButtonPressed;
-        ModEntry.ModHelper.Events.GameLoop.UpdateTicked -= UpdateValues;
+        ModEntry.ModHelper.Events.GameLoop.UpdateTicked -= UpdateValuesForTime;
         ModEntry.ModHelper.Events.Display.RenderedWorld -= OnRenderedWorld;
         ModEntry.ModHelper.Events.Player.Warped -= OnWarped;
         ModEntry.ModHelper.Events.Content.AssetsInvalidated -= OnAssetsInvalidated;

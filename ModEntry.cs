@@ -28,7 +28,6 @@ namespace GlobalGodRays
             Helper.Events.GameLoop.GameLaunched += OnGameLaunched;
             Helper.Events.GameLoop.SaveLoaded += OnSaveLoaded;
             Helper.Events.GameLoop.ReturnedToTitle += OnReturnedToTitle;
-            Helper.Events.Input.ButtonPressed += OnButtonPressed;
         }
 
         private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
@@ -69,15 +68,6 @@ namespace GlobalGodRays
         {
             GenericModConfigMenuApi ??= Helper.ModRegistry.GetApi<IGenericModConfigMenuApi>("spacechase0.GenericModConfigMenu");
             if (GenericModConfigMenuApi != null) Config?.SetupConfig();
-        }
-
-        private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
-        {
-            if (e.Button is SButton.F2)
-            {
-                GenericModConfigMenuApi?.Unregister(ModManifest);
-                SetupConfig();
-            }
         }
     }
 }
