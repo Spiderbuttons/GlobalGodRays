@@ -2,7 +2,7 @@
   "GodraysEnabled": "God rays enabled for {0}.", // {0} will either be the location name or the current weather ID.
   "GodraysDisabled": "God rays disabled for {0}.",
   
-  "ToggleLocationKey_Name": "Toggle Location God rays",
+  "ToggleLocationKey_Name": "Toggle Location God Rays",
   "ToggleLocationKey_Tooltip": "Press this key to toggle whether god rays are shown in the current location.",
   
   "ToggleWeatherKey_Name": "Toggle Current Weather",
