@@ -200,7 +200,11 @@ public class WeatherConfig
 
     private void SetupGeneric()
     {
-        SwapToPage("GenericSettings");
+        ConfigAPI.AddPage(
+            mod: ModEntry.Manifest,
+            pageId: "GenericSettings",
+            pageTitle: () => $"{i18n.Generic()} {i18n.WeatherSettings()}"
+        );
         
         ConfigAPI.AddBoolOption(
             mod: ModEntry.Manifest,
