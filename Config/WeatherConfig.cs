@@ -149,6 +149,7 @@ public class WeatherConfig
             save: () =>
             {
                 ModEntry.ModHelper.WriteConfig(this);
+                ModEntry.RayManager?.ReloadValues();
             });
         
         ConfigAPI.AddKeybindList(

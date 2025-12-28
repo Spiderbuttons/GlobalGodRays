@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using GlobalGodRays.Config;
 using Microsoft.Xna.Framework;
@@ -28,69 +29,110 @@ public class RayManager : IDisposable
     
     public const string ASSET_NAME = "Spiderbuttons.GodRays/Rays";
     private const string OVERRIDE_FILE_NAME = "location_overrides.json";
-    
-    private static Dictionary<string, bool>? _locationOverrides;
+
+    [field: AllowNull, MaybeNull]
     private static Dictionary<string, bool> LocationOverrides {
         get {
-            if (_locationOverrides is null)
+            if (field is null)
             {
                 try
                 {
-                    _locationOverrides = ModEntry.ModHelper.ModContent.Load<Dictionary<string, bool>>(OVERRIDE_FILE_NAME);
+                    field = ModEntry.ModHelper.ModContent.Load<Dictionary<string, bool>>(OVERRIDE_FILE_NAME);
                 }
                 catch
                 {
-                    _locationOverrides = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+                    field = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
                 }
             }
-            return _locationOverrides;
+            return field;
         }
     }
-    
-    private LocationWeather? CurrentWeather => Game1.currentLocation?.GetWeather();
+
+    private bool? _shouldDrawInThisLocation;
+
+    private bool ShouldDrawInThisLocation
+    {
+        get
+        {
+            if (_shouldDrawInThisLocation is not null) return _shouldDrawInThisLocation.Value;
+            
+            if (Game1.currentLocation is not { } loc) return false;
+            
+            if (LocationOverrides.TryGetValue(loc.Name, out bool isEnabled))
+            {
+                _shouldDrawInThisLocation = isEnabled;
+                return _shouldDrawInThisLocation.Value;
+            }
+            
+            _shouldDrawInThisLocation = loc.IsOutdoors;
+            return _shouldDrawInThisLocation.Value;
+        }
+    }
+
+    private LocationWeather? CurrentWeather => field ??= Game1.currentLocation?.GetWeather();
+
+    private WeatherConfig? _currentConfig;
 
     private WeatherConfig CurrentConfig
     {
         get
         {
+            if (_currentConfig is not null) return _currentConfig;
+            
             if (CurrentWeather is null || !ModEntry.Config.WeatherSpecificConfigs.TryGetValue(CurrentWeather.Weather, out var specificConfig) || specificConfig.UseGenericSettings)
             {
-                return ModEntry.Config;
+                _currentConfig = ModEntry.Config;
+                return _currentConfig;
             }
             
-            return specificConfig;
+            _currentConfig = specificConfig;
+            return _currentConfig;
         }
     }
     
-    private bool IsNotInclementWeather => CurrentWeather is { IsRaining: false, IsLightning: false, IsSnowing: false, IsGreenRain: false };
+    private bool? _isNotInclementWeather;
+    
+    private bool IsNotInclementWeather => _isNotInclementWeather ??= CurrentWeather is { IsRaining: false, IsLightning: false, IsSnowing: false, IsGreenRain: false };
 
+    
+    private bool? _shouldDrawInThisWeather;
+    
     private bool ShouldDrawInThisWeather
     {
         get
         {
+            if (_shouldDrawInThisWeather is not null) return _shouldDrawInThisWeather.Value;
+            
             if (CurrentConfig is not WeatherConfigWithGenericToggle specificConfig)
             {
-                return !CurrentConfig.OnlyWhenSunny || IsNotInclementWeather;
+                _shouldDrawInThisWeather = !CurrentConfig.OnlyWhenSunny || IsNotInclementWeather;
+                return _shouldDrawInThisWeather.Value;
             }
-            return specificConfig.EnableGodRays;
+            
+            _shouldDrawInThisWeather = specificConfig.EnableGodRays;
+            return _shouldDrawInThisWeather.Value;
         }
     }
 
-    private bool AreRaysDisabledByConfig => !CurrentConfig.EnableGodRays;
+    private bool? _areRaysDisabledByConfig;
+    
+    private bool AreRaysDisabledByConfig => _areRaysDisabledByConfig ??= !CurrentConfig.EnableGodRays;
 
+    private bool? _shouldDrawRays;
+    
     private bool ShouldDrawRays
     {
         get
         {
-            if (Game1.currentLocation is not { } loc) return false;
-            if (AreRaysDisabledByConfig) return false;
+            if (_shouldDrawRays is not null) return _shouldDrawRays.Value;
             
-            if (LocationOverrides.TryGetValue(loc.Name, out bool isEnabled))
-            {
-                return isEnabled && (IsNotInclementWeather || ShouldDrawInThisWeather);
-            }
+            if (Game1.currentLocation is null) _shouldDrawRays = false;
+            if (AreRaysDisabledByConfig) _shouldDrawRays = false;
+            if (!IsNotInclementWeather && !ShouldDrawInThisWeather) _shouldDrawRays = false;
+            if (!ShouldDrawInThisLocation) _shouldDrawRays = false;
             
-            return loc.IsOutdoors && (IsNotInclementWeather || ShouldDrawInThisWeather);
+            _shouldDrawRays ??= true;
+            return _shouldDrawRays.Value;
         }
     }
 
@@ -435,6 +477,7 @@ public class RayManager : IDisposable
     {
         RaySeed = (int)Game1.currentGameTime.TotalGameTime.TotalMilliseconds;
         Game1.hudMessages.RemoveWhere(msg => msg.message.Equals(i18n.GodraysEnabled()) || msg.message.Equals(i18n.GodraysDisabled()));
+        ReloadValues();
     }
     
     private void OnAssetsInvalidated(object? sender, AssetsInvalidatedEventArgs e)
@@ -445,6 +488,15 @@ public class RayManager : IDisposable
             _rayTexture = null;
         }
         /* ------------------------------------------------------------------------------------ */
+    }
+
+    public void ReloadValues()
+    {
+        _currentConfig = null;
+        _shouldDrawInThisWeather = null;
+        _shouldDrawInThisLocation = null;
+        _isNotInclementWeather = null;
+        _shouldDrawRays = null;
     }
     
     public void Dispose()

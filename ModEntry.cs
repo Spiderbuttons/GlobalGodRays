@@ -12,7 +12,7 @@ namespace GlobalGodRays
         internal static IModHelper ModHelper { get; private set; } = null!;
         internal static WeatherConfig Config { get; private set; } = null!;
 
-        private static RayManager? RayManager { get; set; }
+        internal static RayManager? RayManager { get; set; }
         
         internal static IGenericModConfigMenuApi? GenericModConfigMenuApi { get; set; }
         internal static ICloudySkiesApi? CloudySkiesApi { get; set; }
