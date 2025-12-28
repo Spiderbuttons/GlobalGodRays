@@ -235,7 +235,7 @@ public class WeatherConfig
             ConfigAPI.AddPage(
                 mod: ModEntry.Manifest,
                 pageId: $"Weather_{weather}",
-                pageTitle: () => weather
+                pageTitle: () => i18n.GetByKey($"Weather_{weather}")
             );
             
             WeatherSpecificConfigs.TryAdd(weather, new WeatherConfigWithGenericToggle());
