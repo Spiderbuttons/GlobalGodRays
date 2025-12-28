@@ -263,7 +263,7 @@ public class RayManager : IDisposable
 
     private void CheckForCloudCover()
     {
-        if (!ShouldDrawRays) return;
+        if (!ShouldDrawRays || Game1.currentLocation.critters is null) return;
         
         IsInCloudCover = Game1.currentLocation.critters.Any(c =>
         {
