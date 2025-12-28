@@ -70,7 +70,20 @@ public class RayManager : IDisposable
         }
     }
 
-    private LocationWeather? CurrentWeather => field ??= Game1.currentLocation?.GetWeather();
+    private LocationWeather? _currentWeather;
+    
+    private LocationWeather? CurrentWeather
+    {
+        get
+        {
+            if (_currentWeather is not null) return _currentWeather;
+            
+            if (Game1.currentLocation is not { } loc) return null;
+            
+            _currentWeather = loc.GetWeather();
+            return _currentWeather;
+        }
+    }
 
     private WeatherConfig? _currentConfig;
 
@@ -211,6 +224,7 @@ public class RayManager : IDisposable
         ModEntry.ModHelper.Events.GameLoop.UpdateTicked += UpdateValuesForTime;
         ModEntry.ModHelper.Events.Display.RenderedWorld += OnRenderedWorld;
         ModEntry.ModHelper.Events.Player.Warped += OnWarped;
+        ModEntry.ModHelper.Events.GameLoop.DayStarted += OnDayStarted;
         ModEntry.ModHelper.Events.Content.AssetsInvalidated += OnAssetsInvalidated;
 
         UpdateValuesForTime(null, null);
@@ -246,7 +260,8 @@ public class RayManager : IDisposable
         specificConfig.EnableGodRays = !ShouldDrawRays;
         specificConfig.UseGenericSettings = false;
         Game1.addHUDMessage(new HUDMessage(specificConfig.EnableGodRays ? enabledMsg : disabledMsg, specificConfig.EnableGodRays ? HUDMessage.newQuest_type : HUDMessage.error_type));
-        
+
+        ReloadValues();
         ModEntry.ModHelper.WriteConfig(ModEntry.Config);
     }
 
@@ -270,6 +285,8 @@ public class RayManager : IDisposable
             bool isEnabled = LocationOverrides[location.Name];
             Game1.addHUDMessage(new HUDMessage(isEnabled ? enabledMsg : disabledMsg, isEnabled ? HUDMessage.newQuest_type : HUDMessage.error_type));
         }
+
+        ReloadValues();
         ModEntry.ModHelper.Data.WriteJsonFile(OVERRIDE_FILE_NAME, LocationOverrides.Any() ? LocationOverrides : null);
     }
 
@@ -529,13 +546,20 @@ public class RayManager : IDisposable
         /* ------------------------------------------------------------------------------------ */
     }
 
+    private void OnDayStarted(object? sender, DayStartedEventArgs e)
+    {
+        ReloadValues();
+    }
+
     public void ReloadValues()
     {
         _currentConfig = null;
+        _currentWeather = null;
         _shouldDrawInThisWeather = null;
         _shouldDrawInThisLocation = null;
         _isNotInclementWeather = null;
         _shouldDrawRays = null;
+        _areRaysDisabledByConfig = null;
         RayScale = null;
         LightrayIntensity = null;
         RayAnimationSpeed = null;
