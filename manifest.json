@@ -1,7 +1,7 @@
 {
     "Name": "Global God Rays",
     "Author": "Spiderbuttons",
-    "Version": "1.0.1",
+    "Version": "1.1.0",
     "Description": "Render gorgeous sun beams in outdoor locations during the day.",
     "UniqueID": "Spiderbuttons.GlobalGodRays",
     "EntryDll": "GlobalGodRays.dll", 
