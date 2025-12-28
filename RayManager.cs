@@ -313,7 +313,7 @@ public class RayManager : IDisposable
 
     private void OnRenderedWorld(object? sender, RenderedWorldEventArgs e)
     {
-        if (!ShouldDrawRays) return;
+        if (!ShouldDrawRays || Game1.game1.takingMapScreenshot) return;
         
         SpriteBatch b = e.SpriteBatch;
         Random random = Utility.CreateRandom(RaySeed);
