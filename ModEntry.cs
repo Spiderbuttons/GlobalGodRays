@@ -67,7 +67,7 @@ namespace GlobalGodRays
         private void SetupConfig()
         {
             GenericModConfigMenuApi ??= Helper.ModRegistry.GetApi<IGenericModConfigMenuApi>("spacechase0.GenericModConfigMenu");
-            if (GenericModConfigMenuApi != null) Config?.SetupConfig();
+            if (GenericModConfigMenuApi != null) Config.SetupConfig();
         }
     }
 }

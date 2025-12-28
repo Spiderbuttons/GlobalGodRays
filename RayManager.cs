@@ -5,7 +5,6 @@ using System.Linq;
 using GlobalGodRays.Config;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
 using StardewValley.BellsAndWhistles;
@@ -243,7 +242,6 @@ public class RayManager : IDisposable
         if (!ModEntry.Config.WeatherSpecificConfigs.TryGetValue(CurrentWeather.Weather, out var specificConfig))
         {
             specificConfig = new WeatherConfigWithGenericToggle { UseGenericSettings = true };
-            ModEntry.Config.WeatherSpecificConfigs.Add(CurrentWeather.Weather, specificConfig);
         }
         
         string weatherName = CurrentWeather.Weather;
@@ -259,10 +257,20 @@ public class RayManager : IDisposable
         
         specificConfig.EnableGodRays = !ShouldDrawRays;
         specificConfig.UseGenericSettings = false;
+        ModEntry.Config.WeatherSpecificConfigs[CurrentWeather.Weather] = specificConfig;
+        
         Game1.addHUDMessage(new HUDMessage(specificConfig.EnableGodRays ? enabledMsg : disabledMsg, specificConfig.EnableGodRays ? HUDMessage.newQuest_type : HUDMessage.error_type));
 
         ReloadValues();
         ModEntry.ModHelper.WriteConfig(ModEntry.Config);
+        
+        /* If I don't do this, GMCM will sometimes save cached values which overwrite the ones changed via this hotkey. */
+        if (ModEntry.GenericModConfigMenuApi is not null)
+        {
+            ModEntry.GenericModConfigMenuApi.Unregister(ModEntry.Manifest);
+            ModEntry.Config.SetupConfig();
+        }
+        /* Eventually I'll PR a fix to that to GMCM, but for now this is the workaround. */
     }
 
     private void PressLocationToggle()

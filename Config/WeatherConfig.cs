@@ -88,11 +88,6 @@ public class WeatherConfig
     {
         return GetType() == typeof(WeatherConfig);
     }
-
-    public WeatherConfig()
-    {
-        Init();
-    }
     
     public bool DoAllPropertiesMatchDefault()
     {
@@ -104,7 +99,7 @@ public class WeatherConfig
                DoesPropertyMatchDefault(nameof(FadeUnderClouds));
     }
     
-    public bool DoesPropertyMatchDefault(string prop)
+    private bool DoesPropertyMatchDefault(string prop)
     {
         return prop switch
         {
@@ -112,7 +107,7 @@ public class WeatherConfig
             nameof(RayScale) => Math.Abs(RayScale - 0.65f) < 0.001f,
             nameof(RayIntensity) => Math.Abs(RayIntensity - 4f) < 0.001f,
             nameof(RayAnimationSpeed) => Math.Abs(RayAnimationSpeed - 20f) < 0.001f,
-            nameof(RayOpacityModifier) => Math.Abs(RayOpacityModifier - 1f) < 0.001f,
+            nameof(RayOpacityModifier) => Math.Abs(RayOpacityModifier - 1.2f) < 0.001f,
             nameof(FadeUnderClouds) => FadeUnderClouds,
             _ => false
         };
@@ -132,7 +127,7 @@ public class WeatherConfig
         foreach (var weather in WeatherSpecificConfigs)
         {
             weather.Value.Init();
-            if (weather.Value is { } specificConfig) specificConfig.UseGenericSettings = true;
+            weather.Value.UseGenericSettings = true;
         }
     }
 
@@ -145,7 +140,11 @@ public class WeatherConfig
     {
         ConfigAPI.Register(
             mod: ModEntry.Manifest,
-            reset: Init,
+            reset: () =>
+            {
+                Init();
+                ModEntry.RayManager?.ReloadValues();
+            },
             save: () =>
             {
                 ModEntry.ModHelper.WriteConfig(this);
@@ -191,7 +190,7 @@ public class WeatherConfig
                 tooltip: i18n.ModdedPageTooltip
             );
         }
-
+        
         SetupGeneric();
         SetupVanilla();
         if (CloudySkiesApi is not null) SetupModded();
