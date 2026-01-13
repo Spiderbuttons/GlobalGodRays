@@ -143,12 +143,12 @@ public class WeatherConfig
             reset: () =>
             {
                 Init();
-                ModEntry.RayManager?.ReloadValues();
+                ModEntry.ScreenRayManager.Value?.ReloadValues();
             },
             save: () =>
             {
                 ModEntry.ModHelper.WriteConfig(this);
-                ModEntry.RayManager?.ReloadValues();
+                ModEntry.ScreenRayManager.Value?.ReloadValues();
             });
         
         ConfigAPI.AddKeybindList(

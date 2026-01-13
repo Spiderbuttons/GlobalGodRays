@@ -14,7 +14,7 @@ using StardewValley.TokenizableStrings;
 
 namespace GlobalGodRays;
 
-public class RayManager : IDisposable
+public class RayManager
 {
     public static readonly HashSet<string> VanillaWeatherIds = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -203,7 +203,7 @@ public class RayManager : IDisposable
     private int CurrentTime => Game1.timeOfDay + (int)((float)Game1.gameTimeInterval / MillisecondsPerMinute % 10f);
     
     
-    private int MillisecondsPerMinute => Game1.realMilliSecondsPerGameMinute + Game1.currentLocation?.ExtraMillisecondsPerInGameMinute ?? 0;
+    private int MillisecondsPerMinute => Game1.realMilliSecondsPerGameMinute + (Game1.currentLocation?.ExtraMillisecondsPerInGameMinute ?? 0);
     private int MillisecondsToNextMinute => MillisecondsPerMinute - Game1.gameTimeInterval % MillisecondsPerMinute;
     
     private float ProgressToNoon => Utility.CalculateMinutesBetweenTimes(MorningTime, CurrentTime) / (float)Utility.CalculateMinutesBetweenTimes(MorningTime, NoonTime);
@@ -218,18 +218,11 @@ public class RayManager : IDisposable
     public RayManager()
     {
         RaySeed = (int)Game1.currentGameTime.TotalGameTime.TotalMilliseconds;
-        
-        ModEntry.ModHelper.Events.Input.ButtonPressed += OnButtonPressed;
-        ModEntry.ModHelper.Events.GameLoop.UpdateTicked += UpdateValuesForTime;
-        ModEntry.ModHelper.Events.Display.RenderedWorld += OnRenderedWorld;
-        ModEntry.ModHelper.Events.Player.Warped += OnWarped;
-        ModEntry.ModHelper.Events.GameLoop.DayStarted += OnDayStarted;
-        ModEntry.ModHelper.Events.Content.AssetsInvalidated += OnAssetsInvalidated;
 
-        UpdateValuesForTime(null, null);
+        OnUpdateTicked(null, null);
     }
 
-    private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
+    public void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
     {
         if (ModEntry.Config.ToggleLocationKey.JustPressed()) PressLocationToggle();
         if (ModEntry.Config.ToggleWeatherKey.JustPressed()) PressWeatherToggle();
@@ -298,7 +291,7 @@ public class RayManager : IDisposable
         ModEntry.ModHelper.Data.WriteJsonFile(OVERRIDE_FILE_NAME, LocationOverrides.Any() ? LocationOverrides : null);
     }
 
-    private void UpdateValuesForTime(object? sender, UpdateTickedEventArgs? e)
+    public void OnUpdateTicked(object? sender, UpdateTickedEventArgs? e)
     {
         if (!ShouldDrawRays) return;
         
@@ -310,7 +303,7 @@ public class RayManager : IDisposable
 
     private void CheckForCloudCover()
     {
-        if (!ShouldDrawRays || Game1.currentLocation.critters is null) return;
+        if (!ShouldDrawRays || Game1.currentLocation?.critters is null) return;
         
         IsInCloudCover = Game1.currentLocation.critters.Any(c =>
         {
@@ -400,14 +393,15 @@ public class RayManager : IDisposable
         return x < 0.5 ? 2 * x * x : 1 - Math.Pow(-2 * x + 2, 2) / 2;
     }
 
-    private void OnRenderedWorld(object? sender, RenderedWorldEventArgs e)
+    public void OnRenderedWorld(object? sender, RenderedWorldEventArgs e)
     {
         if (!ShouldDrawRays || Game1.game1.takingMapScreenshot) return;
         
-        int mapWidth = Game1.currentLocation.Map.DisplayWidth;
-        int gViewportHeight = Game1.graphics.GraphicsDevice.Viewport.Height;
-        
         SpriteBatch b = e.SpriteBatch;
+        
+        int mapWidth = Game1.currentLocation?.Map.DisplayWidth ?? 0;
+        int gViewportHeight = Game1.viewport.Height;
+        
         Random random = Utility.CreateRandom(RaySeed);
         Color drawColour = RayColour;
         
@@ -514,7 +508,7 @@ public class RayManager : IDisposable
             /* Otherwise, the horizontal offset above will mean fewer rays the further down in the map you are. */
             
             /* Discard the ray if it'll end up being drawn off-screen. */
-            if (rayXPosition < -extraWidth || rayXPosition > Game1.graphics.GraphicsDevice.Viewport.Width + extraWidth)
+            if (rayXPosition < -extraWidth || rayXPosition > Game1.viewport.Width + extraWidth)
                 continue;
             
             /* Where we're going, we don't need alpha blend mode... */
@@ -537,14 +531,14 @@ public class RayManager : IDisposable
         }
     }
 
-    private void OnWarped(object? sender, WarpedEventArgs e)
+    public void OnWarped(object? sender, WarpedEventArgs e)
     {
         RaySeed = (int)Game1.currentGameTime.TotalGameTime.TotalMilliseconds;
         Game1.hudMessages.RemoveWhere(msg => msg.message.Equals(i18n.GodraysEnabled()) || msg.message.Equals(i18n.GodraysDisabled()));
         ReloadValues();
     }
     
-    private void OnAssetsInvalidated(object? sender, AssetsInvalidatedEventArgs e)
+    public void OnAssetsInvalidated(object? sender, AssetsInvalidatedEventArgs e)
     {
         /* I really doubt anyone is ever gonna retexture these, but... you never know, I guess. */
         if (e.NamesWithoutLocale.Any(a => a.IsEquivalentTo(ASSET_NAME)))
@@ -554,7 +548,7 @@ public class RayManager : IDisposable
         /* ------------------------------------------------------------------------------------ */
     }
 
-    private void OnDayStarted(object? sender, DayStartedEventArgs e)
+    public void OnDayStarted(object? sender, DayStartedEventArgs e)
     {
         ReloadValues();
     }
@@ -571,15 +565,5 @@ public class RayManager : IDisposable
         RayScale = null;
         LightrayIntensity = null;
         RayAnimationSpeed = null;
-    }
-    
-    public void Dispose()
-    {
-        ModEntry.ModHelper.Events.Input.ButtonPressed -= OnButtonPressed;
-        ModEntry.ModHelper.Events.GameLoop.UpdateTicked -= UpdateValuesForTime;
-        ModEntry.ModHelper.Events.Display.RenderedWorld -= OnRenderedWorld;
-        ModEntry.ModHelper.Events.Player.Warped -= OnWarped;
-        ModEntry.ModHelper.Events.Content.AssetsInvalidated -= OnAssetsInvalidated;
-        GC.SuppressFinalize(this);
     }
 }
